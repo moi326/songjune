@@ -82,7 +82,20 @@ h1 {
     font-size: 20px;
     font-weight: bold;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
+
+@keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Lotto Ball Colors */
+.ball-yellow { background-color: #fbc400; border-color: #e5b300; color: #fff; text-shadow: 1px 1px 1px rgba(0,0,0,0.2); }
+.ball-blue { background-color: #69c8f2; border-color: #5bbadd; color: #fff; text-shadow: 1px 1px 1px rgba(0,0,0,0.2); }
+.ball-red { background-color: #ff7272; border-color: #e66666; color: #fff; text-shadow: 1px 1px 1px rgba(0,0,0,0.2); }
+.ball-gray { background-color: #aaaaaa; border-color: #999999; color: #fff; text-shadow: 1px 1px 1px rgba(0,0,0,0.2); }
+.ball-green { background-color: #b0d840; border-color: #9ec239; color: #fff; text-shadow: 1px 1px 1px rgba(0,0,0,0.2); }
 
 #generator-btn {
     padding: 12px 24px;

@@ -38,6 +38,14 @@ generatorBtn.addEventListener("click", () => {
     for (const number of numbers) {
         const lottoBall = document.createElement("div");
         lottoBall.classList.add("lotto-ball");
+        
+        // Add color based on number range
+        if (number <= 10) lottoBall.classList.add("ball-yellow");
+        else if (number <= 20) lottoBall.classList.add("ball-blue");
+        else if (number <= 30) lottoBall.classList.add("ball-red");
+        else if (number <= 40) lottoBall.classList.add("ball-gray");
+        else lottoBall.classList.add("ball-green");
+
         lottoBall.textContent = number;
         lottoDisplay.appendChild(lottoBall);
     }
