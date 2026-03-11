@@ -6,21 +6,23 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
 
 ## Game Design & Features
 
-*   **3D Environment:** A stylized 3D world with a perspective camera following the ball.
+*   **3D Environment:** A stylized 3D world with a perspective camera following the ball. Features a "thrilling" bottom floor for falling sequences.
 *   **Player Controls:**
-    - **Move Left/Right:** Arrow keys or A/D.
-    - **Jump:** NOT ALLOWED (Manual jumping is disabled).
+    - **Move Left/Right:** Arrow keys or A/D. The ball can now fall off the sides of the track!
     - **Start/Restart:** Spacebar.
 *   **Core Mechanics:**
-    - **Forward Momentum:** The ball moves forward automatically.
-    - **Obstacles:** Various shapes (cubes, cylinders) that the player must dodge. Colliding with one results in a Game Over.
-    - **Jump Pads:** Specific zones on the track that propel the ball into the air, allowing it to bypass certain obstacles or reach elevated paths.
-    - **Score System:** Score increases based on the distance traveled.
+    - **Forward Momentum:** The ball moves forward automatically, speeding up as the score increases.
+    - **Ball Physics:** Realistic rolling animation with visual rotation.
+    - **Obstacles:** Simplified set of obstacles to focus on navigation.
+    - **Jump Pads:** Propel the ball over gaps or into tunnels.
+    - **Tunnels:** New tunnel segments (wide and narrow) for varied gameplay.
+    - **Gaps:** Procedural gaps that get longer as the player progresses.
+    - **Persistent Coins:** Coins are saved in local storage and can be used for revives.
+    - **Falling Mechanic:** If the ball falls off the track or into a gap, it falls deep into a grid-covered bottom floor before Game Over.
 *   **Visual Aesthetics:**
-    - Modern HUD with a clean layout.
-    - Vibrant colors using `oklch`.
-    - Soft shadows and depth of field effects.
-    - Subtle background textures for a premium feel.
+    - Modern HUD with score, best score, and persistent coin count.
+    - Simple, clean floor tiles for better performance and visibility.
+    - Fog and lighting for atmosphere.
 
 ## Project Structure
 
