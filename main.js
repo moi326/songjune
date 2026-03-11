@@ -20,6 +20,7 @@ const REVIVE_COST = 300;
 // --- GAME STATE ---
 let state = 'START'; // START, PLAYING, GAMEOVER
 let score = 0;
+let highScore = parseInt(localStorage.getItem('highScore')) || 0;
 let coins = parseInt(localStorage.getItem('totalCoins')) || 0;
 let scene, camera, renderer, ball, bottomFloor;
 let clock = new THREE.Clock();
@@ -33,6 +34,7 @@ let ballVelocity = new THREE.Vector3(0, 0, 0);
 
 // --- ELEMENTS ---
 const scoreValue = document.getElementById('score-value');
+const highScoreValue = document.getElementById('high-score-value');
 const coinValue = document.getElementById('coin-value');
 const finalScore = document.getElementById('final-score');
 const startOverlay = document.getElementById('overlay');
@@ -41,8 +43,9 @@ const reviveContainer = document.getElementById('revive-container');
 const reviveButton = document.getElementById('revive-button');
 const container = document.getElementById('canvas-container');
 
-// Update coin display immediately
+// Update coin and high score display immediately
 if (coinValue) coinValue.innerText = coins;
+if (highScoreValue) highScoreValue.innerText = highScore;
 
 // --- INITIALIZATION ---
 function init() {
@@ -263,7 +266,7 @@ function spawnObstacle(z) {
     // Don't spawn obstacles inside tunnels or near gaps
     if (tunnels.some(t => Math.abs(t.position.z - z) < 30)) return;
     
-    const types = ['box', 'movingBox', 'crusher', 'pyramid'];
+    const types = ['box', 'movingBox', 'crusher', 'pyramid', 'windmill', 'bouncer', 'laser'];
     const type = types[Math.floor(Math.random() * types.length)];
     let geo, mat, mesh;
 
@@ -291,6 +294,27 @@ function spawnObstacle(z) {
         mat = new THREE.MeshStandardMaterial({ color: 0xff3300 });
         mesh = new THREE.Mesh(geo, mat);
         mesh.position.set((Math.random() - 0.5) * (TRACK_WIDTH - 3), 1.5, z);
+    } else if (type === 'windmill') {
+        const w = TRACK_WIDTH + 4;
+        geo = new THREE.BoxGeometry(w, 1.0, 1.0);
+        mat = new THREE.MeshStandardMaterial({ color: 0xff8800 });
+        mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(0, 1.5, z);
+        mesh.userData = { isWindmill: true, speed: (Math.random() > 0.5 ? 1 : -1) * 0.05 };
+    } else if (type === 'bouncer') {
+        const r = 1.5 + Math.random();
+        geo = new THREE.SphereGeometry(r, 16, 16);
+        mat = new THREE.MeshStandardMaterial({ color: 0x00ff00, metalness: 0.3, roughness: 0.4 });
+        mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set((Math.random() - 0.5) * (TRACK_WIDTH - r*2), r, z);
+        mesh.userData = { isBouncer: true, timeOffset: Math.random() * Math.PI * 2, bounceSpeed: 0.005, height: 4 + Math.random() * 5, startY: r };
+    } else if (type === 'laser') {
+        geo = new THREE.CylinderGeometry(0.2, 0.2, TRACK_WIDTH + 4);
+        mat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 });
+        mesh = new THREE.Mesh(geo, mat);
+        mesh.rotation.z = Math.PI / 2;
+        mesh.position.set(0, 1.5, z);
+        mesh.userData = { isLaser: true, timeOffset: Math.random() * Math.PI * 2, blinkSpeed: 0.003 };
     }
 
     if (mesh) {
@@ -346,6 +370,12 @@ function updatePhysics() {
     score = Math.floor(Math.abs(ball.position.z) / SCORE_DIVIDER);
     scoreValue.innerText = score;
 
+    // Real-time High Score Update
+    if (score > highScore) {
+        highScore = score;
+        highScoreValue.innerText = highScore;
+    }
+
     // Side Movement - NO CLAMP (can fall off)
     let sideMove = 0;
     if (keys['ArrowLeft'] || keys['KeyA']) sideMove = -SIDE_SPEED;
@@ -396,6 +426,16 @@ function updatePhysics() {
             } else if (o.userData.isCrusher) {
                 const time = Date.now() * o.userData.speed + o.userData.timeOffset;
                 o.position.y = 1.0 + Math.abs(Math.sin(time)) * 5;
+            } else if (o.userData.isWindmill) {
+                o.rotation.y += o.userData.speed;
+                o.rotation.z += o.userData.speed;
+            } else if (o.userData.isBouncer) {
+                const time = Date.now() * o.userData.bounceSpeed + o.userData.timeOffset;
+                o.position.y = o.userData.startY + Math.abs(Math.sin(time)) * o.userData.height;
+            } else if (o.userData.isLaser) {
+                const time = Date.now() * o.userData.blinkSpeed + o.userData.timeOffset;
+                const isOn = Math.sin(time) > 0;
+                o.visible = isOn;
             }
         }
     });
@@ -419,6 +459,7 @@ function updatePhysics() {
 
     // Collision Detection: Obstacles
     obstacles.forEach(o => {
+        if (!o.visible) return; // Skip collision if invisible (laser off)
         const box = new THREE.Box3().setFromObject(o);
         const ballSphere = new THREE.Sphere(ball.position, BALL_RADIUS);
         if (box.intersectsSphere(ballSphere)) gameOver();
@@ -479,6 +520,7 @@ function updatePhysics() {
 function gameOver() {
     state = 'GAMEOVER';
     finalScore.innerText = score;
+    localStorage.setItem('highScore', highScore);
     gameOverOverlay.style.display = 'flex';
     reviveContainer.style.display = coins >= REVIVE_COST ? 'block' : 'none';
 }

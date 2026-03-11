@@ -17,12 +17,15 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
     - **Jump Pads:** Propel the ball over gaps or into tunnels.
     - **Tunnels:** New tunnel segments (wide and narrow) for varied gameplay.
     - **Gaps:** Procedural gaps that get longer as the player progresses.
-    - **Persistent Coins:** Coins are saved in local storage and can be used for revives.
-    - **Falling Mechanic:** If the ball falls off the track or into a gap, it falls deep into a grid-covered bottom floor before Game Over.
-*   **Visual Aesthetics:**
-    - Modern HUD with score, best score, and persistent coin count.
-    - Simple, clean floor tiles for better performance and visibility.
-    - Fog and lighting for atmosphere.
+    *   **Persistent Stats:** 
+        - Coins are saved in local storage and can be used for revives.
+        - **Best Score (High Score)** is saved in local storage and updated in real-time during gameplay.
+    *   **Falling Mechanic:** If the ball falls off the track or into a gap, it falls deep into a grid-covered bottom floor before Game Over.
+    *   **Visual Aesthetics:**
+        - Modern HUD with score, best score, and persistent coin count.
+        - Simple, clean floor tiles for better performance and visibility.
+        - Fog and lighting for atmosphere.
+
 
 ## Project Structure
 
