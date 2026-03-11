@@ -43,10 +43,43 @@ body, html {
     align-items: center;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
-    padding: 0.5rem 2rem;
-    border-radius: 1rem;
+    padding: 0.5rem 3rem;
+    border-radius: 1.5rem;
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+#coin-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #ffd700;
+}
+
+.action-button {
+    background: linear-gradient(45deg, #ffd700, #ff8c00);
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 1rem;
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    pointer-events: auto;
+}
+
+.action-button:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(255, 215, 0, 0.6);
+}
+
+.action-button:active {
+    transform: translateY(0) scale(0.95);
 }
 
 #score-label {

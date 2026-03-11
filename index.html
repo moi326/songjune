@@ -20,6 +20,10 @@
         <div id="score-container">
             <span id="score-label">SCORE</span>
             <span id="score-value">0</span>
+            <div id="coin-container">
+                <span id="coin-icon">🪙</span>
+                <span id="coin-value">0</span>
+            </div>
         </div>
         
         <div id="overlay" class="overlay">
@@ -29,10 +33,13 @@
             </div>
         </div>
 
-        <div id="game-over-overlay" class="overlay" style="display: none;">
+        <div id="game-over-overlay" class="overlay" style="display: none; pointer-events: auto;">
             <div class="overlay-content">
                 <h1>GAME OVER</h1>
                 <p>Final Score: <span id="final-score">0</span></p>
+                <div id="revive-container" style="display: none; margin-top: 1rem;">
+                    <button id="revive-button" class="action-button">REVIVE (300 🪙)</button>
+                </div>
                 <p id="instruction">Press <span class="highlight">SPACE</span> to Restart</p>
             </div>
         </div>
