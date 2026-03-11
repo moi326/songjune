@@ -108,9 +108,19 @@ function initAuth() {
 
 async function handleGoogleLogin() {
     try {
+        // configuration check
+        if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+            alert("Firebase 설정이 필요합니다!\nfirebase-config.js 파일에 실제 API Key를 입력해 주세요.");
+            return;
+        }
         await signInWithPopup(auth, provider);
     } catch (error) {
         console.error("Login failed:", error);
+        if (error.code === 'auth/popup-blocked') {
+            alert("로그인 팝업이 차단되었습니다. 팝업 허용 후 다시 시도해 주세요.");
+        } else {
+            alert("로그인 중 오류가 발생했습니다: " + error.message);
+        }
     }
 }
 
