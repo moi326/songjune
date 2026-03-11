@@ -13,7 +13,16 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
 *   **Core Mechanics:**
     - **Forward Momentum:** The ball moves forward automatically, speeding up as the score increases.
     - **Ball Physics:** Realistic rolling animation with visual rotation.
-    - **Obstacles:** Simplified set of obstacles to focus on navigation.
+    - **Obstacles:** A diverse set of obstacles including:
+        - **Box/Pyramid:** Static obstacles to navigate around.
+        - **Moving Box:** Side-to-side moving blocks.
+        - **Crusher:** Blocks that move up and down.
+        - **Windmill:** Spinning bars across the track.
+        - **Bouncer:** Giant spheres that bounce vertically.
+        - **Laser:** Blinking red beams that must be timed.
+        - **Pendulum:** Swinging spheres from above.
+        - **Closing Gates:** Walls that slide together and apart.
+        - **Spike Trap:** Red spikes that pop up from the floor.
     - **Jump Pads:** Propel the ball over gaps or into tunnels.
     - **Tunnels:** New tunnel segments (wide and narrow) for varied gameplay.
     - **Gaps:** Procedural gaps that get longer as the player progresses.

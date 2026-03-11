@@ -266,7 +266,7 @@ function spawnObstacle(z) {
     // Don't spawn obstacles inside tunnels or near gaps
     if (tunnels.some(t => Math.abs(t.position.z - z) < 30)) return;
     
-    const types = ['box', 'movingBox', 'crusher', 'pyramid', 'windmill', 'bouncer', 'laser'];
+    const types = ['box', 'movingBox', 'crusher', 'pyramid', 'windmill', 'bouncer', 'laser', 'pendulum', 'gates', 'spikes'];
     const type = types[Math.floor(Math.random() * types.length)];
     let geo, mat, mesh;
 
@@ -315,6 +315,56 @@ function spawnObstacle(z) {
         mesh.rotation.z = Math.PI / 2;
         mesh.position.set(0, 1.5, z);
         mesh.userData = { isLaser: true, timeOffset: Math.random() * Math.PI * 2, blinkSpeed: 0.003 };
+    } else if (type === 'pendulum') {
+        const group = new THREE.Group();
+        const rodGeo = new THREE.CylinderGeometry(0.1, 0.1, 10);
+        const rodMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+        const rod = new THREE.Mesh(rodGeo, rodMat);
+        rod.position.y = -5;
+        group.add(rod);
+
+        const ballGeo = new THREE.SphereGeometry(1.5, 32, 32);
+        const ballMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.2 });
+        const pBall = new THREE.Mesh(ballGeo, ballMat);
+        pBall.position.y = -10;
+        group.add(pBall);
+
+        group.position.set(0, 12, z);
+        group.userData = { isPendulum: true, timeOffset: Math.random() * Math.PI * 2, speed: 0.002, angle: Math.PI / 3 };
+        mesh = group;
+    } else if (type === 'gates') {
+        const group = new THREE.Group();
+        const gateGeo = new THREE.BoxGeometry(TRACK_WIDTH / 2, 4, 1);
+        const gateMat = new THREE.MeshStandardMaterial({ color: 0x4444ff });
+        const leftGate = new THREE.Mesh(gateGeo, gateMat);
+        leftGate.position.x = -TRACK_WIDTH / 4 - 2;
+        const rightGate = new THREE.Mesh(gateGeo, gateMat);
+        rightGate.position.x = TRACK_WIDTH / 4 + 2;
+        group.add(leftGate);
+        group.add(rightGate);
+        group.position.z = z;
+        group.position.y = 2;
+        group.userData = { isGates: true, timeOffset: Math.random() * Math.PI * 2, speed: 0.002, leftGate, rightGate };
+        mesh = group;
+    } else if (type === 'spikes') {
+        const group = new THREE.Group();
+        const baseGeo = new THREE.BoxGeometry(TRACK_WIDTH, 0.2, 4);
+        const baseMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+        const base = new THREE.Mesh(baseGeo, baseMat);
+        group.add(base);
+
+        const spikeGeo = new THREE.ConeGeometry(0.3, 1.5, 8);
+        const spikeMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+        for(let i=0; i<5; i++) {
+            for(let j=0; j<3; j++) {
+                const spike = new THREE.Mesh(spikeGeo, spikeMat);
+                spike.position.set(-TRACK_WIDTH/2 + 1 + i*2, 0, -1.5 + j*1.5);
+                group.add(spike);
+            }
+        }
+        group.position.set(0, -0.1, z);
+        group.userData = { isSpikes: true, timeOffset: Math.random() * Math.PI * 2, speed: 0.004 };
+        mesh = group;
     }
 
     if (mesh) {
@@ -436,6 +486,20 @@ function updatePhysics() {
                 const time = Date.now() * o.userData.blinkSpeed + o.userData.timeOffset;
                 const isOn = Math.sin(time) > 0;
                 o.visible = isOn;
+            } else if (o.userData.isPendulum) {
+                const time = Date.now() * o.userData.speed + o.userData.timeOffset;
+                o.rotation.z = Math.sin(time) * o.userData.angle;
+            } else if (o.userData.isGates) {
+                const time = Date.now() * o.userData.speed + o.userData.timeOffset;
+                const offset = Math.abs(Math.sin(time)) * 4;
+                o.userData.leftGate.position.x = -TRACK_WIDTH / 4 - 2 + offset;
+                o.userData.rightGate.position.x = TRACK_WIDTH / 4 + 2 - offset;
+            } else if (o.userData.isSpikes) {
+                const time = Date.now() * o.userData.speed + o.userData.timeOffset;
+                const spikeY = Math.max(-1.5, Math.sin(time) * 2);
+                o.children.forEach((child, index) => {
+                    if (index > 0) child.position.y = spikeY;
+                });
             }
         }
     });
