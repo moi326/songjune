@@ -32,6 +32,7 @@ const REVIVE_COST = 300;
 // --- GAME STATE ---
 let state = 'START'; 
 let score = 0;
+let scoreBonus = 0;
 let highScore = parseInt(localStorage.getItem('highScore')) || 0;
 let coins = parseInt(localStorage.getItem('totalCoins')) || 0;
 let isFlying = false;
@@ -273,8 +274,16 @@ function handleSpacePress() {
 function resetGame() {
     state = 'PLAYING';
     score = 0;
+    scoreBonus = 0;
     isFlying = false;
     flightTimer = 0;
+    isTitan = false;
+    titanTimer = 0;
+    isBoosting = false;
+    boostTimer = 0;
+    ball.scale.set(1, 1, 1);
+    camera.fov = 75;
+    camera.updateProjectionMatrix();
     coinValue.innerText = coins;
     ball.position.set(0, BALL_RADIUS + 2, 0);
     ball.rotation.set(0, 0, 0);
@@ -620,7 +629,7 @@ function updatePhysics() {
     if (isBoosting) currentSpeed += 1.5;
 
     ball.position.z -= currentSpeed;
-    score = Math.max(0, Math.floor(Math.abs(ball.position.z) / SCORE_DIVIDER));
+    score = Math.max(0, Math.floor(Math.abs(ball.position.z) / SCORE_DIVIDER) + scoreBonus);
     scoreValue.innerText = score;
 
     if (score > highScore) {
@@ -747,8 +756,7 @@ function updatePhysics() {
 
     scorePads = scorePads.filter(p => {
         if (new THREE.Box3().setFromObject(p).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) {
-            const penalty = p.userData.scorePenalty * SCORE_DIVIDER;
-            ball.position.z += penalty; // Move ball backward to reduce distance-based score
+            scoreBonus -= p.userData.scorePenalty;
             scene.remove(p);
             return false;
         }

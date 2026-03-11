@@ -1,9 +1,9 @@
 // Firebase project configuration
 export const firebaseConfig = {
-  apiKey: "AIzaSyCH6kZHjKwAXSuf_RRTEwtQVKbrL5pyWug",
-  authDomain: "songjune-326.firebaseapp.com", // 콘솔에서 확인 후 수정 필요
-  projectId: "songjune-326",                 // 콘솔에서 확인 후 수정 필요
-  storageBucket: "songjune-326.appspot.com", // 콘솔에서 확인 후 수정 필요
-  messagingSenderId: "SENDER_ID",            // 콘솔에서 확인 후 수정 필요
-  appId: "APP_ID"                            // 콘솔에서 확인 후 수정 필요
+  apiKey: "AIzaSyD7B743QvCL1W8gXJJv46fM-ICSr4apPOI",
+  authDomain: "songjune-4b7b2.firebaseapp.com",
+  projectId: "songjune-4b7b2",
+  storageBucket: "songjune-4b7b2.firebasestorage.app",
+  messagingSenderId: "614643851981",
+  appId: "1:614643851981:web:ab5cc2e11ba23976baff84"
 };
