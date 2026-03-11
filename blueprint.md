@@ -32,9 +32,15 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
         - **Boost Pad:** A glowing cyan chevron pad that drastically increases speed and warps the camera FOV for 3 seconds.
     - **Enhanced Tunnels:** High-detail tunnel segments with neon ribs and metallic surfaces.
     - **Gaps:** Procedural gaps that get longer as the player progresses.
+    *   **User Authentication:**
+        - Google Login integration using Firebase Auth.
+        - Persistent user profiles with display names and photos.
+    *   **Cloud Data Sync:**
+        - High scores and coin counts are automatically synced to Firebase Firestore.
+        - Data is preserved across sessions and devices.
     *   **Persistent Stats:** 
-        - Coins are saved in local storage and can be used for revives.
-        - **Best Score (High Score)** is saved in local storage and updated in real-time during gameplay.
+        - Coins are saved in local storage and cloud.
+        - **Best Score (High Score)** is saved in local storage and cloud, updated in real-time.
     *   **Falling Mechanic:** If the ball falls off the track or into a gap, it falls deep into a grid-covered bottom floor before Game Over.
     *   **Visual Aesthetics:**
         - Modern HUD with score, best score, and persistent coin count.

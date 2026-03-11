@@ -33,6 +33,79 @@ body, html {
     pointer-events: none;
 }
 
+#auth-status {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    pointer-events: auto;
+}
+
+#user-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 0.4rem 1rem;
+    border-radius: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#user-photo {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-color);
+}
+
+#user-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.ui-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.5rem 1.2rem;
+    border-radius: 1rem;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.ui-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.ui-btn-small {
+    background: transparent;
+    border: none;
+    color: #ff4444;
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+}
+
+.google-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: white;
+    color: #757575;
+    margin: 1.5rem auto;
+}
+
+.google-btn img {
+    width: 20px;
+}
+
+.google-btn:hover {
+    box-shadow: 0 8px 20px rgba(255, 255, 255, 0.3);
+}
+
 #score-container {
     position: absolute;
     top: 2rem;

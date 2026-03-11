@@ -1,4 +1,14 @@
 import * as THREE from 'three';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { firebaseConfig } from './firebase-config.js';
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
 
 // --- CONFIGURATION ---
 const TRACK_WIDTH = 10;
@@ -56,11 +66,122 @@ const reviveContainer = document.getElementById('revive-container');
 const reviveButton = document.getElementById('revive-button');
 const container = document.getElementById('canvas-container');
 
+// Auth Elements
+const loginBtn = document.getElementById('login-btn');
+const logoutBtn = document.getElementById('logout-btn');
+const googleLoginBtn = document.getElementById('google-login-btn');
+const userProfile = document.getElementById('user-profile');
+const userNameDisplay = document.getElementById('user-name');
+const userPhotoDisplay = document.getElementById('user-photo');
+const loginPrompt = document.getElementById('login-prompt');
+
+let currentUser = null;
+
 if (coinValue) coinValue.innerText = coins;
 if (highScoreValue) highScoreValue.innerText = highScore;
 
+// --- AUTH LOGIC ---
+function initAuth() {
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUser = user;
+            loginBtn.style.display = 'none';
+            userProfile.style.display = 'flex';
+            loginPrompt.style.display = 'none';
+            userNameDisplay.innerText = user.displayName || "Player";
+            userPhotoDisplay.src = user.photoURL || "";
+            
+            // Sync with Firestore
+            await syncUserCloudData(user.uid);
+        } else {
+            currentUser = null;
+            loginBtn.style.display = 'block';
+            userProfile.style.display = 'none';
+            loginPrompt.style.display = 'block';
+        }
+    });
+
+    googleLoginBtn.addEventListener('click', handleGoogleLogin);
+    loginBtn.addEventListener('click', handleGoogleLogin);
+    logoutBtn.addEventListener('click', handleLogout);
+}
+
+async function handleGoogleLogin() {
+    try {
+        await signInWithPopup(auth, provider);
+    } catch (error) {
+        console.error("Login failed:", error);
+    }
+}
+
+async function handleLogout() {
+    try {
+        await signOut(auth);
+        location.reload(); // Reset state
+    } catch (error) {
+        console.error("Logout failed:", error);
+    }
+}
+
+async function syncUserCloudData(uid) {
+    const userDocRef = doc(db, "users", uid);
+    const docSnap = await getDoc(userDocRef);
+
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        // Load cloud data if better
+        if (data.highScore > highScore) {
+            highScore = data.highScore;
+            localStorage.setItem('highScore', highScore);
+            highScoreValue.innerText = highScore;
+        }
+        if (data.coins > coins) {
+            coins = data.coins;
+            localStorage.setItem('totalCoins', coins);
+            coinValue.innerText = coins;
+        }
+    } else {
+        // Create initial record
+        await setDoc(userDocRef, {
+            highScore: highScore,
+            coins: coins,
+            lastPlayed: Date.now()
+        });
+    }
+
+    // Real-time update listener for other devices
+    onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+            const data = doc.data();
+            if (data.highScore > highScore) {
+                highScore = data.highScore;
+                highScoreValue.innerText = highScore;
+            }
+            if (data.coins !== coins) {
+                // Only update coins if they are significantly different to avoid flickering during gameplay
+                if (Math.abs(data.coins - coins) > 50) {
+                    coins = data.coins;
+                    coinValue.innerText = coins;
+                }
+            }
+        }
+    });
+}
+
+async function saveUserDataToCloud() {
+    if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        await setDoc(userDocRef, {
+            highScore: highScore,
+            coins: coins,
+            lastPlayed: Date.now()
+        }, { merge: true });
+    }
+}
+
 // --- INITIALIZATION ---
 function init() {
+    initAuth();
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050510);
     scene.fog = new THREE.Fog(0x050510, 20, 250); // Increased fog range for flight
@@ -172,6 +293,7 @@ function reviveGame() {
         coins -= REVIVE_COST;
         localStorage.setItem('totalCoins', coins);
         coinValue.innerText = coins;
+        saveUserDataToCloud(); // Sync to cloud
         state = 'PLAYING';
         isFlying = false;
         flightTimer = 0;
@@ -648,6 +770,7 @@ function updatePhysics() {
             coins += 10;
             localStorage.setItem('totalCoins', coins);
             coinValue.innerText = coins;
+            saveUserDataToCloud(); // Sync to cloud
             scene.remove(c);
             return false;
         }
@@ -671,6 +794,7 @@ function gameOver() {
     state = 'GAMEOVER';
     finalScore.innerText = score;
     localStorage.setItem('highScore', highScore);
+    saveUserDataToCloud(); // Sync to cloud
     gameOverOverlay.style.display = 'flex';
     reviveContainer.style.display = coins >= REVIVE_COST ? 'block' : 'none';
 }

@@ -10,13 +10,25 @@
     <script type="importmap">
     {
       "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
       }
     }
     </script>
 </head>
 <body>
     <div id="game-ui">
+        <div id="auth-status">
+            <button id="login-btn" class="ui-btn">Sign In</button>
+            <div id="user-profile" style="display: none;">
+                <img id="user-photo" src="" alt="P">
+                <span id="user-name">Guest</span>
+                <button id="logout-btn" class="ui-btn-small">Logout</button>
+            </div>
+        </div>
+
         <div id="score-container">
             <span id="score-label">SCORE</span>
             <span id="score-value">0</span>
@@ -33,6 +45,14 @@
         <div id="overlay" class="overlay">
             <div class="overlay-content">
                 <h1 id="title">ROLLING BALL 3D</h1>
+                <div id="login-prompt">
+                    <p>Sign in to save your High Score & Coins!</p>
+                    <button id="google-login-btn" class="action-button google-btn">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
+                        Continue with Google
+                    </button>
+                    <p>or</p>
+                </div>
                 <p id="instruction">Press <span class="highlight">SPACE</span> to Start</p>
             </div>
         </div>
