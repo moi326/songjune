@@ -23,9 +23,13 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
         - **Pendulum:** Swinging spheres from above.
         - **Closing Gates:** Walls that slide together and apart.
         - **Spike Trap:** Red spikes that pop up from the floor.
-    - **Jump Pads:** Propel the ball over gaps or into tunnels.
-    - **Super Jump (Rainbow Pad):** Launches the ball high into the sky, triggering 10 seconds of flight with a neon trail.
-    - **Score Pads (Negative):** Red glowing pads that subtract points (-10 to -50) when touched.
+        - **Blackhole:** A gravity well that pulls the ball towards it.
+    - **Items & Pads:**
+        - **Jump Pads:** Propel the ball over gaps or into tunnels.
+        - **Super Jump (Rainbow Pad):** Launches the ball high into the sky, triggering 10 seconds of flight with a neon trail.
+        - **Score Pads (Negative):** Red glowing pads that subtract points (-10 to -50) when touched.
+        - **Titan Orb:** A glowing blue item that makes the ball 3x larger and invincible, destroying obstacles on contact for 8 seconds.
+        - **Boost Pad:** A glowing cyan chevron pad that drastically increases speed and warps the camera FOV for 3 seconds.
     - **Enhanced Tunnels:** High-detail tunnel segments with neon ribs and metallic surfaces.
     - **Gaps:** Procedural gaps that get longer as the player progresses.
     *   **Persistent Stats:** 
