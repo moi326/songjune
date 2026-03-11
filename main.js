@@ -6,10 +6,11 @@ const TRACK_LENGTH = 10000;
 const BALL_RADIUS = 0.5;
 const GRAVITY = -0.015;
 const JUMP_IMPULSE = 0.35;
-const FORWARD_SPEED = 0.2;
-const SIDE_SPEED = 0.15;
-const OBSTACLE_SPAWN_INTERVAL = 50; // Every 50 z-units
-const JUMP_PAD_SPAWN_INTERVAL = 200; // Every 200 z-units
+const FORWARD_SPEED = 0.3;
+const SIDE_SPEED = 0.2;
+const OBSTACLE_SPAWN_INTERVAL = 20; // Every 20 z-units (was 50)
+const JUMP_PAD_SPAWN_INTERVAL = 100; // Every 100 z-units (was 200)
+const SCORE_DIVIDER = 5; // To slow down score progression
 
 // --- GAME STATE ---
 let state = 'START'; // START, PLAYING, GAMEOVER
@@ -175,8 +176,8 @@ function updatePhysics() {
     if (state !== 'PLAYING') return;
 
     // Forward Movement
-    ball.position.z -= FORWARD_SPEED + (score / 10000); // Gradually speed up
-    score = Math.floor(Math.abs(ball.position.z));
+    ball.position.z -= FORWARD_SPEED + (score / 5000); // Gradually speed up (was 10000)
+    score = Math.floor(Math.abs(ball.position.z) / SCORE_DIVIDER);
     scoreValue.innerText = score;
 
     // Side Movement
