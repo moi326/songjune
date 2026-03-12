@@ -24,8 +24,8 @@ const SIDE_SPEED = 0.25;
 const OBSTACLE_SPAWN_INTERVAL = 40; 
 const JUMP_PAD_SPAWN_INTERVAL = 30; 
 const COIN_SPAWN_INTERVAL = 10;
-const GAP_SPAWN_INTERVAL = 80; 
-const TUNNEL_SPAWN_INTERVAL = 150; 
+const GAP_SPAWN_INTERVAL = 120; 
+const TUNNEL_SPAWN_INTERVAL = 200; 
 const SCORE_DIVIDER = 5;
 const REVIVE_COST = 300;
 
@@ -346,7 +346,7 @@ function spawnFloorRow(z) {
     if (isGap) {
         if (Math.abs(z % GAP_SPAWN_INTERVAL) < TILE_SIZE) {
             // Randomly spawn super jump pad instead of normal jump pad
-            if (Math.random() > 0.8) spawnSuperJumpPad(z + TILE_SIZE);
+            if (Math.random() > 0.9) spawnSuperJumpPad(z + TILE_SIZE);
             else spawnJumpPad(z + TILE_SIZE, true); 
         }
         return; 
@@ -361,7 +361,7 @@ function spawnFloorRow(z) {
     floorTiles.push(tile);
     
     // Randomly spawn negative score pads on normal floor
-    if (Math.abs(z) > 100 && Math.random() > 0.92) {
+    if (Math.abs(z) > 100 && Math.random() > 0.96) {
         spawnScorePad(z);
     }
 
@@ -725,8 +725,8 @@ function updatePhysics() {
     if (Math.abs(nextSpawnZ % TILE_SIZE) < currentSpeed) spawnFloorRow(nextSpawnZ);
     if (Math.abs(nextSpawnZ % OBSTACLE_SPAWN_INTERVAL) < currentSpeed) spawnObstacle(nextSpawnZ);
     if (Math.abs(nextSpawnZ % COIN_SPAWN_INTERVAL) < currentSpeed) spawnCoin(nextSpawnZ);
-    if (Math.abs(nextSpawnZ % 200) < currentSpeed) spawnTitanOrb(nextSpawnZ);
-    if (Math.abs(nextSpawnZ % 150) < currentSpeed) spawnBoostPad(nextSpawnZ);
+    if (Math.abs(nextSpawnZ % 300) < currentSpeed) spawnTitanOrb(nextSpawnZ);
+    if (Math.abs(nextSpawnZ % 250) < currentSpeed) spawnBoostPad(nextSpawnZ);
 
     if (!isFlying) {
         obstacles = obstacles.filter(o => {
