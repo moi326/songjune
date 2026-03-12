@@ -726,7 +726,7 @@ function updatePhysics() {
     if (Math.abs(nextSpawnZ % OBSTACLE_SPAWN_INTERVAL) < currentSpeed) spawnObstacle(nextSpawnZ);
     if (Math.abs(nextSpawnZ % COIN_SPAWN_INTERVAL) < currentSpeed) spawnCoin(nextSpawnZ);
     if (Math.abs(nextSpawnZ % 300) < currentSpeed) spawnTitanOrb(nextSpawnZ);
-    if (Math.abs(nextSpawnZ % 250) < currentSpeed) spawnBoostPad(nextSpawnZ);
+    if (Math.abs(nextSpawnZ % 100) < currentSpeed) spawnBoostPad(nextSpawnZ);
 
     if (!isFlying) {
         obstacles = obstacles.filter(o => {
