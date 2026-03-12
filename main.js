@@ -326,6 +326,15 @@ function reviveGame() {
         ballVelocity.set(0, 0, 0);
         ball.position.y = BALL_RADIUS + 10;
         ball.position.x = 0;
+        
+        // Update score UI immediately
+        scoreValue.innerText = score;
+        
+        // Brief invincibility (reusing titan orb logic without size change or just making titan for 3s)
+        isTitan = true;
+        titanTimer = 3; 
+        ball.material.emissive.setHex(0x00ffff);
+        
         gameOverOverlay.style.display = 'none';
     }
 }
@@ -380,17 +389,11 @@ function spawnTunnel(z) {
     rightWall.position.set(width/2, height/2 - 0.25, -length/2 + TILE_SIZE/2);
     tunnelGroup.add(rightWall);
 
-    // Ceiling
-    const ceiling = new THREE.Mesh(new THREE.BoxGeometry(width + 0.5, 0.5, length), wallMat);
-    ceiling.position.set(0, height - 0.25, -length/2 + TILE_SIZE/2);
-    tunnelGroup.add(ceiling);
+    // Ceiling (Removed to not cover the top)
 
     // Neon Ribs
     for(let i=0; i<length; i+=4) {
-        const ribGeo = new THREE.BoxGeometry(width + 1, 0.2, 0.2);
-        const rib = new THREE.Mesh(ribGeo, neonMat);
-        rib.position.set(0, height - 0.5, -i + TILE_SIZE/2);
-        tunnelGroup.add(rib);
+        // Top rib removed
         
         const sideRibGeo = new THREE.BoxGeometry(0.2, height, 0.2);
         const lRib = new THREE.Mesh(sideRibGeo, neonMat);
