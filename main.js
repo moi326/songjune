@@ -710,8 +710,8 @@ function updatePhysics() {
                 o.rotation.y -= 0.05;
                 o.children[0].rotation.z += 0.1;
                 const distZ = Math.abs(ball.position.z - o.position.z);
-                if (distZ < 20 && !isFlying && !isTitan) {
-                    const pullStr = (20 - distZ) * 0.005;
+                if (distZ < 15 && !isFlying && !isTitan) {
+                    const pullStr = (15 - distZ) * 0.002;
                     ball.position.x = THREE.MathUtils.lerp(ball.position.x, o.position.x, pullStr);
                 }
             }
