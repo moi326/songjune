@@ -346,7 +346,7 @@ function spawnFloorRow(z) {
     if (isGap) {
         if (Math.abs(z % GAP_SPAWN_INTERVAL) < TILE_SIZE) {
             // Randomly spawn super jump pad instead of normal jump pad
-            if (Math.random() > 0.9) spawnSuperJumpPad(z + TILE_SIZE);
+            if (Math.random() > 0.6) spawnSuperJumpPad(z + TILE_SIZE);
             else spawnJumpPad(z + TILE_SIZE, true); 
         }
         return; 
