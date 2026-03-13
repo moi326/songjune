@@ -412,7 +412,7 @@ function spawnTunnel(z) {
 function spawnObstacle(z) {
     if (tunnels.some(t => Math.abs(t.position.z - z) < 40)) return;
     
-    const types = ['box', 'movingBox', 'crusher', 'pyramid', 'windmill', 'bouncer', 'laser', 'pendulum', 'gates', 'spikes', 'blackhole'];
+    const types = ['box', 'movingBox', 'crusher', 'pyramid', 'windmill', 'bouncer', 'laser', 'pendulum', 'gates', 'spikes'];
     const type = types[Math.floor(Math.random() * types.length)];
     let geo, mat, mesh;
 
@@ -493,19 +493,6 @@ function spawnObstacle(z) {
         group.position.set(0, -0.1, z);
         group.userData = { isSpikes: true, timeOffset: Math.random() * Math.PI * 2, speed: 0.004 };
         mesh = group;
-    } else if (type === 'blackhole') {
-        geo = new THREE.CylinderGeometry(2, 2, 0.2, 32);
-        mat = new THREE.MeshBasicMaterial({ color: 0x110022 });
-        mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set((Math.random() - 0.5) * (TRACK_WIDTH - 4), 0.1, z);
-        
-        const auraGeo = new THREE.TorusGeometry(2, 0.2, 16, 100);
-        const auraMat = new THREE.MeshBasicMaterial({ color: 0xaa00ff, transparent: true, opacity: 0.5 });
-        const aura = new THREE.Mesh(auraGeo, auraMat);
-        aura.rotation.x = Math.PI / 2;
-        mesh.add(aura);
-        
-        mesh.userData = { isBlackhole: true };
     }
 
     if (mesh) {
@@ -706,14 +693,6 @@ function updatePhysics() {
             } else if (o.userData.isSpikes) {
                 const spikeY = Math.max(-1.5, Math.sin(time) * 2);
                 o.children.forEach((c, i) => { if (i > 0) c.position.y = spikeY; });
-            } else if (o.userData.isBlackhole) {
-                o.rotation.y -= 0.05;
-                o.children[0].rotation.z += 0.1;
-                const distZ = Math.abs(ball.position.z - o.position.z);
-                if (distZ < 15 && !isFlying && !isTitan) {
-                    const pullStr = (15 - distZ) * 0.002;
-                    ball.position.x = THREE.MathUtils.lerp(ball.position.x, o.position.x, pullStr);
-                }
             }
         }
     });
@@ -734,7 +713,7 @@ function updatePhysics() {
             const box = new THREE.Box3().setFromObject(o);
             const ballSphere = new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS);
             if (box.intersectsSphere(ballSphere)) {
-                if (isTitan && !o.userData.isBlackhole) {
+                if (isTitan) {
                     scene.remove(o);
                     return false; // Destroy obstacle
                 } else {

@@ -23,7 +23,6 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
         - **Pendulum:** Swinging spheres from above.
         - **Closing Gates:** Walls that slide together and apart.
         - **Spike Trap:** Red spikes that pop up from the floor.
-        - **Blackhole:** A gravity well that pulls the ball towards it.
     - **Items & Pads:**
         - **Jump Pads:** Propel the ball over gaps or into tunnels.
         - **Super Jump (Rainbow Pad):** Launches the ball high into the sky, triggering 10 seconds of flight with a neon trail.
