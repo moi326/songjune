@@ -55,6 +55,7 @@ let isTitan = false;
 let titanTimer = 0;
 let isBoosting = false;
 let boostTimer = 0;
+let isMuted = false;
 
 // --- ELEMENTS ---
 const scoreValue = document.getElementById('score-value');
@@ -67,9 +68,10 @@ const reviveContainer = document.getElementById('revive-container');
 const reviveButton = document.getElementById('revive-button');
 const container = document.getElementById('canvas-container');
 const bgMusic = document.getElementById('bg-music');
+const soundToggle = document.getElementById('sound-toggle');
 
 if (bgMusic) {
-    bgMusic.volume = 0.4; // Set a reasonable volume
+    bgMusic.volume = 0.6; // Increased volume
 }
 
 // Auth Elements
@@ -267,13 +269,40 @@ function init() {
     window.addEventListener('resize', onWindowResize);
     reviveButton.addEventListener('click', reviveGame);
 
+    // Audio Unlock Logic
+    document.addEventListener('click', unlockAudio, { once: true });
+    if (soundToggle) {
+        soundToggle.addEventListener('click', toggleSound);
+    }
+
     animate();
+}
+
+function unlockAudio() {
+    if (bgMusic && bgMusic.paused && state === 'PLAYING') {
+        bgMusic.play().catch(e => console.log("Audio unlock failed:", e));
+    }
+}
+
+function toggleSound() {
+    isMuted = !isMuted;
+    if (bgMusic) {
+        bgMusic.muted = isMuted;
+        soundToggle.innerText = isMuted ? "🔇 Sound Off" : "🔊 Sound On";
+        if (!isMuted && state === 'PLAYING' && bgMusic.paused) {
+            bgMusic.play().catch(e => console.log("Manual play failed:", e));
+        }
+    }
 }
 
 function handleSpacePress() {
     if (state === 'START' || state === 'GAMEOVER') {
-        if (bgMusic && bgMusic.paused) {
-            bgMusic.play().catch(e => console.log("Audio play failed:", e));
+        if (bgMusic && !isMuted) {
+            bgMusic.play().catch(e => {
+                console.log("Audio play failed on Space:", e);
+                // Fallback: request another interaction if play is rejected
+                document.addEventListener('click', () => bgMusic.play(), { once: true });
+            });
         }
         resetGame();
     }
@@ -343,8 +372,8 @@ function reviveGame() {
         titanTimer = 3; 
         ball.material.emissive.setHex(0x00ffff);
         
-        if (bgMusic && bgMusic.paused) {
-            bgMusic.play().catch(e => console.log("Audio play failed:", e));
+        if (bgMusic && !isMuted && bgMusic.paused) {
+            bgMusic.play().catch(e => console.log("Audio play failed on Revive:", e));
         }
         
         gameOverOverlay.style.display = 'none';
