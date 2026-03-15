@@ -412,7 +412,7 @@ function spawnTunnel(z) {
 function spawnObstacle(z) {
     if (tunnels.some(t => Math.abs(t.position.z - z) < 40)) return;
     
-    const types = ['box', 'movingBox', 'crusher', 'pyramid', 'windmill', 'bouncer', 'laser', 'pendulum', 'gates', 'spikes'];
+    const types = ['box', 'movingBox', 'crusher', 'windmill', 'bouncer', 'laser', 'pendulum', 'gates'];
     const type = types[Math.floor(Math.random() * types.length)];
     let geo, mat, mesh;
 
@@ -434,11 +434,6 @@ function spawnObstacle(z) {
         mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(0, 4, z);
         mesh.userData = { isCrusher: true, timeOffset: Math.random() * Math.PI, speed: 0.005 };
-    } else if (type === 'pyramid') {
-        geo = new THREE.ConeGeometry(1.5, 3, 4);
-        mat = new THREE.MeshStandardMaterial({ color: 0xff3300 });
-        mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set((Math.random() - 0.5) * (TRACK_WIDTH - 3), 1.5, z);
     } else if (type === 'windmill') {
         geo = new THREE.BoxGeometry(TRACK_WIDTH + 4, 1.0, 1.0);
         mat = new THREE.MeshStandardMaterial({ color: 0xff8800 });
@@ -479,19 +474,6 @@ function spawnObstacle(z) {
         group.add(lGate, rGate);
         group.position.set(0, 2, z);
         group.userData = { isGates: true, timeOffset: Math.random() * Math.PI * 2, speed: 0.002, leftGate: lGate, rightGate: rGate };
-        mesh = group;
-    } else if (type === 'spikes') {
-        const group = new THREE.Group();
-        group.add(new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH, 0.2, 4), new THREE.MeshStandardMaterial({ color: 0x222222 })));
-        const spikeGeo = new THREE.ConeGeometry(0.3, 1.5, 8);
-        const spikeMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-        for(let i=0; i<5; i++) for(let j=0; j<3; j++) {
-            const s = new THREE.Mesh(spikeGeo, spikeMat);
-            s.position.set(-TRACK_WIDTH/2 + 1 + i*2, 0, -1.5 + j*1.5);
-            group.add(s);
-        }
-        group.position.set(0, -0.1, z);
-        group.userData = { isSpikes: true, timeOffset: Math.random() * Math.PI * 2, speed: 0.004 };
         mesh = group;
     }
 
@@ -690,9 +672,6 @@ function updatePhysics() {
                 const offset = Math.abs(Math.sin(time)) * 4;
                 o.userData.leftGate.position.x = -TRACK_WIDTH / 4 - 2 + offset;
                 o.userData.rightGate.position.x = TRACK_WIDTH / 4 + 2 - offset;
-            } else if (o.userData.isSpikes) {
-                const spikeY = Math.max(-1.5, Math.sin(time) * 2);
-                o.children.forEach((c, i) => { if (i > 0) c.position.y = spikeY; });
             }
         }
     });
