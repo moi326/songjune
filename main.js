@@ -66,6 +66,11 @@ const gameOverOverlay = document.getElementById('game-over-overlay');
 const reviveContainer = document.getElementById('revive-container');
 const reviveButton = document.getElementById('revive-button');
 const container = document.getElementById('canvas-container');
+const bgMusic = document.getElementById('bg-music');
+
+if (bgMusic) {
+    bgMusic.volume = 0.4; // Set a reasonable volume
+}
 
 // Auth Elements
 const loginBtn = document.getElementById('login-btn');
@@ -267,6 +272,9 @@ function init() {
 
 function handleSpacePress() {
     if (state === 'START' || state === 'GAMEOVER') {
+        if (bgMusic && bgMusic.paused) {
+            bgMusic.play().catch(e => console.log("Audio play failed:", e));
+        }
         resetGame();
     }
 }
@@ -334,6 +342,10 @@ function reviveGame() {
         isTitan = true;
         titanTimer = 3; 
         ball.material.emissive.setHex(0x00ffff);
+        
+        if (bgMusic && bgMusic.paused) {
+            bgMusic.play().catch(e => console.log("Audio play failed:", e));
+        }
         
         gameOverOverlay.style.display = 'none';
     }
@@ -771,6 +783,9 @@ function updatePhysics() {
 
 function gameOver() {
     state = 'GAMEOVER';
+    if (bgMusic) {
+        bgMusic.pause();
+    }
     finalScore.innerText = score;
     localStorage.setItem('highScore', highScore);
     saveUserDataToCloud(); // Sync to cloud

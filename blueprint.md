@@ -40,10 +40,11 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
         - Coins are saved in local storage and cloud.
         - **Best Score (High Score)** is saved in local storage and cloud, updated in real-time.
     *   **Falling Mechanic:** If the ball falls off the track or into a gap, it falls deep into a grid-covered bottom floor before Game Over.
-    *   **Visual Aesthetics:**
+    *   **Visual & Audio Aesthetics:**
         - Modern HUD with score, best score, and persistent coin count.
         - Simple, clean floor tiles for better performance and visibility.
         - Fog and lighting for atmosphere.
+        - Thrilling, energetic background music that plays during gameplay.
 
 
 ## Project Structure
