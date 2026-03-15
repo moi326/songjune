@@ -57,6 +57,10 @@ let isBoosting = false;
 let boostTimer = 0;
 let isMuted = false;
 
+// --- AUDIO SYSTEM ---
+let audioListener, bgMusic;
+const MUSIC_URL = 'https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a7348a.mp3'; // High-energy music
+
 // --- ELEMENTS ---
 const scoreValue = document.getElementById('score-value');
 const highScoreValue = document.getElementById('high-score-value');
@@ -67,12 +71,7 @@ const gameOverOverlay = document.getElementById('game-over-overlay');
 const reviveContainer = document.getElementById('revive-container');
 const reviveButton = document.getElementById('revive-button');
 const container = document.getElementById('canvas-container');
-const bgMusic = document.getElementById('bg-music');
 const soundToggle = document.getElementById('sound-toggle');
-
-if (bgMusic) {
-    bgMusic.volume = 0.6; // Increased volume
-}
 
 // Auth Elements
 const loginBtn = document.getElementById('login-btn');
@@ -116,26 +115,20 @@ function initAuth() {
 
 async function handleGoogleLogin() {
     try {
-        // configuration check
         if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-            alert("Firebase 설정이 필요합니다!\nfirebase-config.js 파일에 실제 API Key를 입력해 주세요.");
+            alert("Firebase 설정이 필요합니다!");
             return;
         }
         await signInWithPopup(auth, provider);
     } catch (error) {
         console.error("Login failed:", error);
-        if (error.code === 'auth/popup-blocked') {
-            alert("로그인 팝업이 차단되었습니다. 팝업 허용 후 다시 시도해 주세요.");
-        } else {
-            alert("로그인 중 오류가 발생했습니다: " + error.message);
-        }
     }
 }
 
 async function handleLogout() {
     try {
         await signOut(auth);
-        location.reload(); // Reset state
+        location.reload();
     } catch (error) {
         console.error("Logout failed:", error);
     }
@@ -147,7 +140,6 @@ async function syncUserCloudData(uid) {
 
     if (docSnap.exists()) {
         const data = docSnap.data();
-        // Load cloud data if better
         if (data.highScore > highScore) {
             highScore = data.highScore;
             localStorage.setItem('highScore', highScore);
@@ -159,7 +151,6 @@ async function syncUserCloudData(uid) {
             coinValue.innerText = coins;
         }
     } else {
-        // Create initial record
         await setDoc(userDocRef, {
             highScore: highScore,
             coins: coins,
@@ -167,7 +158,6 @@ async function syncUserCloudData(uid) {
         });
     }
 
-    // Real-time update listener for other devices
     onSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
             const data = doc.data();
@@ -176,7 +166,6 @@ async function syncUserCloudData(uid) {
                 highScoreValue.innerText = highScore;
             }
             if (data.coins !== coins) {
-                // Only update coins if they are significantly different to avoid flickering during gameplay
                 if (Math.abs(data.coins - coins) > 50) {
                     coins = data.coins;
                     coinValue.innerText = coins;
@@ -202,7 +191,7 @@ function init() {
     initAuth();
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050510);
-    scene.fog = new THREE.Fog(0x050510, 20, 250); // Increased fog range for flight
+    scene.fog = new THREE.Fog(0x050510, 20, 250);
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1500);
     camera.position.set(0, 8, 12);
@@ -213,6 +202,17 @@ function init() {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
+
+    // Audio Initialization
+    audioListener = new THREE.AudioListener();
+    camera.add(audioListener);
+    bgMusic = new THREE.Audio(audioListener);
+    const audioLoader = new THREE.AudioLoader();
+    audioLoader.load(MUSIC_URL, (buffer) => {
+        bgMusic.setBuffer(buffer);
+        bgMusic.setLoop(true);
+        bgMusic.setVolume(0.5);
+    });
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
@@ -229,11 +229,7 @@ function init() {
     scene.add(dirLight);
 
     const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
-    const ballMat = new THREE.MeshStandardMaterial({ 
-        color: 0x00ffcc, 
-        roughness: 0.2,
-        metalness: 0.5
-    });
+    const ballMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, roughness: 0.2, metalness: 0.5 });
     ball = new THREE.Mesh(ballGeo, ballMat);
     ball.castShadow = true;
     
@@ -242,16 +238,11 @@ function init() {
     const stripe1 = new THREE.Mesh(stripeGeo, stripeMat);
     const stripe2 = new THREE.Mesh(stripeGeo, stripeMat);
     stripe2.rotation.y = Math.PI / 2;
-    ball.add(stripe1);
-    ball.add(stripe2);
+    ball.add(stripe1, stripe2);
     scene.add(ball);
 
     const bottomGeo = new THREE.PlaneGeometry(1000, 1000);
-    const bottomMat = new THREE.MeshStandardMaterial({ 
-        color: 0x111122,
-        transparent: true,
-        opacity: 0.5
-    });
+    const bottomMat = new THREE.MeshStandardMaterial({ color: 0x111122, transparent: true, opacity: 0.5 });
     bottomFloor = new THREE.Mesh(bottomGeo, bottomMat);
     bottomFloor.rotation.x = -Math.PI / 2;
     bottomFloor.position.y = -100;
@@ -264,46 +255,38 @@ function init() {
     window.addEventListener('keydown', (e) => {
         keys[e.code] = true;
         if (e.code === 'Space') handleSpacePress();
+        if (audioListener.context.state === 'suspended') audioListener.context.resume();
     });
     window.addEventListener('keyup', (e) => keys[e.code] = false);
     window.addEventListener('resize', onWindowResize);
     reviveButton.addEventListener('click', reviveGame);
 
-    // Audio Unlock Logic
-    document.addEventListener('click', unlockAudio, { once: true });
-    if (soundToggle) {
-        soundToggle.addEventListener('click', toggleSound);
-    }
+    document.addEventListener('mousedown', () => {
+        if (audioListener.context.state === 'suspended') audioListener.context.resume();
+    });
+
+    if (soundToggle) soundToggle.addEventListener('click', toggleSound);
 
     animate();
-}
-
-function unlockAudio() {
-    if (bgMusic && bgMusic.paused && state === 'PLAYING') {
-        bgMusic.play().catch(e => console.log("Audio unlock failed:", e));
-    }
 }
 
 function toggleSound() {
     isMuted = !isMuted;
     if (bgMusic) {
-        bgMusic.muted = isMuted;
-        soundToggle.innerText = isMuted ? "🔇 Sound Off" : "🔊 Sound On";
-        if (!isMuted && state === 'PLAYING' && bgMusic.paused) {
-            bgMusic.play().catch(e => console.log("Manual play failed:", e));
+        if (isMuted) {
+            bgMusic.setVolume(0);
+            soundToggle.innerText = "🔇 Sound Off";
+        } else {
+            bgMusic.setVolume(0.5);
+            soundToggle.innerText = "🔊 Sound On";
+            if (state === 'PLAYING' && !bgMusic.isPlaying) bgMusic.play();
         }
     }
 }
 
 function handleSpacePress() {
     if (state === 'START' || state === 'GAMEOVER') {
-        if (bgMusic && !isMuted) {
-            bgMusic.play().catch(e => {
-                console.log("Audio play failed on Space:", e);
-                // Fallback: request another interaction if play is rejected
-                document.addEventListener('click', () => bgMusic.play(), { once: true });
-            });
-        }
+        if (bgMusic && bgMusic.buffer && !isMuted && !bgMusic.isPlaying) bgMusic.play();
         resetGame();
     }
 }
@@ -328,17 +311,14 @@ function resetGame() {
     ball.material.emissive.setHex(0x000000);
     
     clearWorld();
-
     startOverlay.style.display = 'none';
     gameOverOverlay.style.display = 'none';
 
-    for(let z = 20; z > -150; z -= TILE_SIZE) {
-        spawnFloorRow(z);
-    }
+    for(let z = 20; z > -150; z -= TILE_SIZE) spawnFloorRow(z);
 }
 
 function clearWorld() {
-    [obstacles, jumpPads, superJumpPads, scorePads, coinMeshes, floorTiles, tunnels, flightTrail, titanOrbs, boostPads].forEach(arr => {
+    [obstacles, jumpPads, superJumpPads, scorePads, coinMeshes, floorTiles, tunnels, titanOrbs, boostPads].forEach(arr => {
         arr.forEach(o => scene.remove(o));
         arr.length = 0;
     });
@@ -349,12 +329,12 @@ function reviveGame() {
         coins -= REVIVE_COST;
         localStorage.setItem('totalCoins', coins);
         coinValue.innerText = coins;
-        saveUserDataToCloud(); // Sync to cloud
+        saveUserDataToCloud();
         state = 'PLAYING';
         isFlying = false;
         flightTimer = 0;
         isTitan = false;
-        titanTimer = 0;
+        titanTimer = 3; 
         isBoosting = false;
         boostTimer = 0;
         ball.scale.set(1, 1, 1);
@@ -363,19 +343,8 @@ function reviveGame() {
         ballVelocity.set(0, 0, 0);
         ball.position.y = BALL_RADIUS + 10;
         ball.position.x = 0;
-        
-        // Update score UI immediately
-        scoreValue.innerText = score;
-        
-        // Brief invincibility (reusing titan orb logic without size change or just making titan for 3s)
-        isTitan = true;
-        titanTimer = 3; 
         ball.material.emissive.setHex(0x00ffff);
-        
-        if (bgMusic && !isMuted && bgMusic.paused) {
-            bgMusic.play().catch(e => console.log("Audio play failed on Revive:", e));
-        }
-        
+        if (bgMusic && bgMusic.buffer && !isMuted && !bgMusic.isPlaying) bgMusic.play();
         gameOverOverlay.style.display = 'none';
     }
 }
@@ -386,7 +355,6 @@ function spawnFloorRow(z) {
     
     if (isGap) {
         if (Math.abs(z % GAP_SPAWN_INTERVAL) < TILE_SIZE) {
-            // Randomly spawn super jump pad instead of normal jump pad
             if (Math.random() > 0.6) spawnSuperJumpPad(z + TILE_SIZE);
             else spawnJumpPad(z + TILE_SIZE, true); 
         }
@@ -401,14 +369,8 @@ function spawnFloorRow(z) {
     scene.add(tile);
     floorTiles.push(tile);
     
-    // Randomly spawn negative score pads on normal floor
-    if (Math.abs(z) > 100 && Math.random() > 0.96) {
-        spawnScorePad(z);
-    }
-
-    if (z < -100 && Math.abs(z % TUNNEL_SPAWN_INTERVAL) < TILE_SIZE) {
-        spawnTunnel(z);
-    }
+    if (Math.abs(z) > 100 && Math.random() > 0.96) spawnScorePad(z);
+    if (z < -100 && Math.abs(z % TUNNEL_SPAWN_INTERVAL) < TILE_SIZE) spawnTunnel(z);
 }
 
 function spawnTunnel(z) {
@@ -416,35 +378,21 @@ function spawnTunnel(z) {
     const height = 6;
     const length = TILE_SIZE * 12;
     const width = TRACK_WIDTH + 2;
-
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 0.8, roughness: 0.2 });
     const neonMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-    
-    // Left Wall
     const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, height, length), wallMat);
     leftWall.position.set(-width/2, height/2 - 0.25, -length/2 + TILE_SIZE/2);
-    tunnelGroup.add(leftWall);
-
-    // Right Wall
     const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, height, length), wallMat);
     rightWall.position.set(width/2, height/2 - 0.25, -length/2 + TILE_SIZE/2);
-    tunnelGroup.add(rightWall);
-
-    // Ceiling (Removed to not cover the top)
-
-    // Neon Ribs
+    tunnelGroup.add(leftWall, rightWall);
     for(let i=0; i<length; i+=4) {
-        // Top rib removed
-        
         const sideRibGeo = new THREE.BoxGeometry(0.2, height, 0.2);
         const lRib = new THREE.Mesh(sideRibGeo, neonMat);
         lRib.position.set(-width/2 + 0.3, height/2, -i + TILE_SIZE/2);
-        tunnelGroup.add(lRib);
         const rRib = new THREE.Mesh(sideRibGeo, neonMat);
         rRib.position.set(width/2 - 0.3, height/2, -i + TILE_SIZE/2);
-        tunnelGroup.add(rRib);
+        tunnelGroup.add(lRib, rRib);
     }
-
     tunnelGroup.position.z = z;
     scene.add(tunnelGroup);
     tunnels.push(tunnelGroup);
@@ -452,11 +400,9 @@ function spawnTunnel(z) {
 
 function spawnObstacle(z) {
     if (tunnels.some(t => Math.abs(t.position.z - z) < 40)) return;
-    
     const types = ['box', 'movingBox', 'crusher', 'windmill', 'bouncer', 'laser', 'pendulum', 'gates'];
     const type = types[Math.floor(Math.random() * types.length)];
     let geo, mat, mesh;
-
     if (type === 'box') {
         const w = 2 + Math.random() * 2;
         geo = new THREE.BoxGeometry(w, 1.5, 1.5);
@@ -499,10 +445,9 @@ function spawnObstacle(z) {
         const group = new THREE.Group();
         const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 10), new THREE.MeshStandardMaterial({ color: 0x888888 }));
         rod.position.y = -5;
-        group.add(rod);
         const pBall = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8 }));
         pBall.position.y = -10;
-        group.add(pBall);
+        group.add(rod, pBall);
         group.position.set(0, 12, z);
         group.userData = { isPendulum: true, timeOffset: Math.random() * Math.PI * 2, speed: 0.002, angle: Math.PI / 3 };
         mesh = group;
@@ -517,7 +462,6 @@ function spawnObstacle(z) {
         group.userData = { isGates: true, timeOffset: Math.random() * Math.PI * 2, speed: 0.002, leftGate: lGate, rightGate: rGate };
         mesh = group;
     }
-
     if (mesh) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
@@ -536,7 +480,6 @@ function spawnJumpPad(z, force = false) {
 function spawnSuperJumpPad(z) {
     const pad = new THREE.Mesh(new THREE.BoxGeometry(5, 0.6, 5), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff00ff, emissiveIntensity: 2 }));
     pad.position.set((Math.random() - 0.5) * (TRACK_WIDTH - 5), 0.1, z);
-    // Add rainbow ring
     const ring = new THREE.Mesh(new THREE.TorusGeometry(3, 0.1, 16, 100), new THREE.MeshBasicMaterial({ color: 0xffff00 }));
     ring.rotation.x = Math.PI / 2;
     pad.add(ring);
@@ -550,12 +493,9 @@ function spawnScorePad(z) {
     const pad = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 3), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.5 }));
     pad.position.set((Math.random() - 0.5) * (TRACK_WIDTH - 3), 0.05, z);
     pad.userData = { scorePenalty: val };
-    
-    // Floating text-like indicator
     const sprite = createTextSprite("-" + val);
     sprite.position.y = 2;
     pad.add(sprite);
-    
     scene.add(pad);
     scorePads.push(pad);
 }
@@ -581,30 +521,20 @@ function spawnCoin(z) {
 }
 
 function spawnTitanOrb(z) {
-    const geo = new THREE.IcosahedronGeometry(0.8, 0);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: true, emissive: 0x00ffff, emissiveIntensity: 2 });
-    const orb = new THREE.Mesh(geo, mat);
+    const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8, 0), new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: true, emissive: 0x00ffff, emissiveIntensity: 2 }));
     orb.position.set((Math.random() - 0.5) * (TRACK_WIDTH - 2), 1.5, z);
     scene.add(orb);
     titanOrbs.push(orb);
 }
 
 function spawnBoostPad(z) {
-    const geo = new THREE.BoxGeometry(4, 0.2, 8);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 1 });
-    const pad = new THREE.Mesh(geo, mat);
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(4, 0.2, 8), new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 1 }));
     pad.position.set((Math.random() - 0.5) * (TRACK_WIDTH - 4), 0.1, z);
-    // Add chevron arrows
     const arrowGeo = new THREE.ConeGeometry(1.5, 2, 3);
     const arrowMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const arrow1 = new THREE.Mesh(arrowGeo, arrowMat);
-    arrow1.rotation.x = -Math.PI / 2;
-    arrow1.position.set(0, 0.2, 1);
-    const arrow2 = new THREE.Mesh(arrowGeo, arrowMat);
-    arrow2.rotation.x = -Math.PI / 2;
-    arrow2.position.set(0, 0.2, -2);
+    const arrow1 = new THREE.Mesh(arrowGeo, arrowMat); arrow1.rotation.x = -Math.PI / 2; arrow1.position.set(0, 0.2, 1);
+    const arrow2 = new THREE.Mesh(arrowGeo, arrowMat); arrow2.rotation.x = -Math.PI / 2; arrow2.position.set(0, 0.2, -2);
     pad.add(arrow1, arrow2);
-    
     scene.add(pad);
     boostPads.push(pad);
 }
@@ -617,94 +547,41 @@ function onWindowResize() {
 
 function updatePhysics() {
     if (state !== 'PLAYING') return;
-
-    if (isTitan) {
-        titanTimer -= 1/60;
-        if (titanTimer <= 0) {
-            isTitan = false;
-            ball.scale.set(1, 1, 1);
-        }
-    }
-    
-    if (isBoosting) {
-        boostTimer -= 1/60;
-        camera.fov = THREE.MathUtils.lerp(camera.fov, 110, 0.1);
-        camera.updateProjectionMatrix();
-        if (boostTimer <= 0) {
-            isBoosting = false;
-        }
-    } else {
-        camera.fov = THREE.MathUtils.lerp(camera.fov, 75, 0.1);
-        camera.updateProjectionMatrix();
-    }
-
+    if (isTitan) { titanTimer -= 1/60; if (titanTimer <= 0) { isTitan = false; ball.scale.set(1, 1, 1); } }
+    if (isBoosting) { boostTimer -= 1/60; camera.fov = THREE.MathUtils.lerp(camera.fov, 110, 0.1); camera.updateProjectionMatrix(); if (boostTimer <= 0) isBoosting = false; }
+    else { camera.fov = THREE.MathUtils.lerp(camera.fov, 75, 0.1); camera.updateProjectionMatrix(); }
     let currentSpeed = FORWARD_SPEED + (score / 1000);
     if (isBoosting) currentSpeed += 1.5;
-
     ball.position.z -= currentSpeed;
     score = Math.max(0, Math.floor(Math.abs(ball.position.z) / SCORE_DIVIDER) + scoreBonus);
     scoreValue.innerText = score;
-
-    if (score > highScore) {
-        highScore = score;
-        highScoreValue.innerText = highScore;
-    }
-
+    if (score > highScore) { highScore = score; highScoreValue.innerText = highScore; }
     let sideMove = 0;
     if (keys['ArrowLeft'] || keys['KeyA']) sideMove = -SIDE_SPEED;
     if (keys['ArrowRight'] || keys['KeyD']) sideMove = SIDE_SPEED;
     ball.position.x += sideMove;
-
     ball.rotation.x -= currentSpeed / BALL_RADIUS;
     ball.rotation.z -= sideMove / BALL_RADIUS;
-
     if (isFlying) {
-        flightTimer -= 1/60;
-        ballVelocity.y = 0; // Float
-        ball.position.y = THREE.MathUtils.lerp(ball.position.y, 40, 0.05); // Rise to sky
+        flightTimer -= 1/60; ballVelocity.y = 0; ball.position.y = THREE.MathUtils.lerp(ball.position.y, 40, 0.05);
         ball.material.emissive.setHSL(Date.now() % 1000 / 1000, 1, 0.5);
-        
-        // Spawn trail
-        if (Math.abs(ball.position.z % 2) < currentSpeed) {
-            const p = new THREE.Mesh(new THREE.SphereGeometry(0.3), new THREE.MeshBasicMaterial({ color: ball.material.emissive.clone() }));
-            p.position.copy(ball.position);
-            scene.add(p);
-            flightTrail.push(p);
-        }
-
-        if (flightTimer <= 0) {
-            isFlying = false;
-            ball.material.emissive.setHex(0x000000);
-        }
-    } else {
-        ballVelocity.y += GRAVITY;
-        ball.position.y += ballVelocity.y;
-    }
-
-    let onGround = false;
-    const ballBottom = ball.position.y - BALL_RADIUS;
-
+        if (flightTimer <= 0) { isFlying = false; ball.material.emissive.setHex(0x000000); }
+    } else { ballVelocity.y += GRAVITY; ball.position.y += ballVelocity.y; }
     floorTiles.forEach(tile => {
         if (Math.abs(ball.position.z - tile.position.z) < TILE_SIZE / 2 + BALL_RADIUS) {
             if (Math.abs(ball.position.x) < TRACK_WIDTH / 2 + BALL_RADIUS) {
-                if (ballBottom <= 0 && ballBottom > -1 && ballVelocity.y <= 0 && !isFlying) {
-                    ball.position.y = BALL_RADIUS;
-                    ballVelocity.y = 0;
-                    onGround = true;
+                if (ball.position.y - BALL_RADIUS <= 0 && ball.position.y - BALL_RADIUS > -1 && ballVelocity.y <= 0 && !isFlying) {
+                    ball.position.y = BALL_RADIUS; ballVelocity.y = 0;
                 }
             }
         }
     });
-
     if (ball.position.y < -90) gameOver();
-
     obstacles.forEach(o => {
         if (o.userData) {
             const time = Date.now() * (o.userData.speed || o.userData.bounceSpeed || 0.002) + o.userData.timeOffset;
-            if (o.userData.isMoving) {
-                o.position.x += o.userData.speed;
-                if (Math.abs(o.position.x) > TRACK_WIDTH / 2 - 1) o.userData.speed *= -1;
-            } else if (o.userData.isCrusher) o.position.y = 1.0 + Math.abs(Math.sin(time)) * 5;
+            if (o.userData.isMoving) { o.position.x += o.userData.speed; if (Math.abs(o.position.x) > TRACK_WIDTH / 2 - 1) o.userData.speed *= -1; }
+            else if (o.userData.isCrusher) o.position.y = 1.0 + Math.abs(Math.sin(time)) * 5;
             else if (o.userData.isWindmill) { o.rotation.y += o.userData.speed; o.rotation.z += o.userData.speed; }
             else if (o.userData.isBouncer) o.position.y = o.userData.startY + Math.abs(Math.sin(time)) * o.userData.height;
             else if (o.userData.isLaser) o.visible = Math.sin(time) > 0;
@@ -716,108 +593,43 @@ function updatePhysics() {
             }
         }
     });
-
     coinMeshes.forEach(c => { c.rotation.z += 0.05; });
-    flightTrail.forEach(p => { p.scale.multiplyScalar(0.95); if(p.scale.x < 0.1) { scene.remove(p); flightTrail.shift(); } });
-
     const nextSpawnZ = ball.position.z - 120;
     if (Math.abs(nextSpawnZ % TILE_SIZE) < currentSpeed) spawnFloorRow(nextSpawnZ);
     if (Math.abs(nextSpawnZ % OBSTACLE_SPAWN_INTERVAL) < currentSpeed) spawnObstacle(nextSpawnZ);
     if (Math.abs(nextSpawnZ % COIN_SPAWN_INTERVAL) < currentSpeed) spawnCoin(nextSpawnZ);
     if (Math.abs(nextSpawnZ % 300) < currentSpeed) spawnTitanOrb(nextSpawnZ);
     if (Math.abs(nextSpawnZ % 100) < currentSpeed) spawnBoostPad(nextSpawnZ);
-
     if (!isFlying) {
         obstacles = obstacles.filter(o => {
             if (!o.visible) return true;
             const box = new THREE.Box3().setFromObject(o);
-            const ballSphere = new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS);
-            if (box.intersectsSphere(ballSphere)) {
-                if (isTitan) {
-                    scene.remove(o);
-                    return false; // Destroy obstacle
-                } else {
-                    gameOver();
-                }
+            if (box.intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) {
+                if (isTitan) { scene.remove(o); return false; } else { gameOver(); }
             }
             return true;
         });
     }
-
-    jumpPads.forEach(j => {
-        if (new THREE.Box3().setFromObject(j).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) ballVelocity.y = JUMP_IMPULSE * 1.5;
-    });
-
-    superJumpPads.forEach(s => {
-        if (new THREE.Box3().setFromObject(s).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) {
-            ballVelocity.y = SUPER_JUMP_IMPULSE;
-            isFlying = true;
-            flightTimer = FLIGHT_DURATION;
-        }
-    });
-
-    scorePads = scorePads.filter(p => {
-        if (new THREE.Box3().setFromObject(p).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) {
-            scoreBonus -= p.userData.scorePenalty;
-            scene.remove(p);
-            return false;
-        }
-        return true;
-    });
-
-    titanOrbs = titanOrbs.filter(t => {
-        t.rotation.y += 0.05;
-        t.rotation.x += 0.05;
-        if (new THREE.Box3().setFromObject(t).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) {
-            isTitan = true;
-            titanTimer = 8;
-            ball.scale.set(3, 3, 3);
-            scene.remove(t);
-            return false;
-        }
-        return true;
-    });
-
-    boostPads.forEach(b => {
-        if (new THREE.Box3().setFromObject(b).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) {
-            isBoosting = true;
-            boostTimer = 3;
-        }
-    });
-
-    coinMeshes = coinMeshes.filter(c => {
-        if (ball.position.distanceTo(c.position) < (isTitan ? BALL_RADIUS * 3 : BALL_RADIUS) + 0.6) {
-            coins += 10;
-            localStorage.setItem('totalCoins', coins);
-            coinValue.innerText = coins;
-            saveUserDataToCloud(); // Sync to cloud
-            scene.remove(c);
-            return false;
-        }
-        return true;
-    });
-
+    jumpPads.forEach(j => { if (new THREE.Box3().setFromObject(j).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) ballVelocity.y = JUMP_IMPULSE * 1.5; });
+    superJumpPads.forEach(s => { if (new THREE.Box3().setFromObject(s).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) { ballVelocity.y = SUPER_JUMP_IMPULSE; isFlying = true; flightTimer = FLIGHT_DURATION; } });
+    scorePads = scorePads.filter(p => { if (new THREE.Box3().setFromObject(p).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) { scoreBonus -= p.userData.scorePenalty; scene.remove(p); return false; } return true; });
+    titanOrbs = titanOrbs.filter(t => { t.rotation.y += 0.05; if (new THREE.Box3().setFromObject(t).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) { isTitan = true; titanTimer = 8; ball.scale.set(3, 3, 3); scene.remove(t); return false; } return true; });
+    boostPads.forEach(b => { if (new THREE.Box3().setFromObject(b).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) { isBoosting = true; boostTimer = 3; } });
+    coinMeshes = coinMeshes.filter(c => { if (ball.position.distanceTo(c.position) < (isTitan ? BALL_RADIUS * 3 : BALL_RADIUS) + 0.6) { coins += 10; localStorage.setItem('totalCoins', coins); coinValue.innerText = coins; saveUserDataToCloud(); scene.remove(c); return false; } return true; });
     const cleanupZ = ball.position.z + 50;
     [floorTiles, obstacles, jumpPads, superJumpPads, scorePads, coinMeshes, tunnels, titanOrbs, boostPads].forEach(arr => {
-        for(let i=arr.length-1; i>=0; i--) {
-            if (arr[i].position.z > cleanupZ) { scene.remove(arr[i]); arr.splice(i, 1); }
-        }
+        for(let i=arr.length-1; i>=0; i--) if (arr[i].position.z > cleanupZ) { scene.remove(arr[i]); arr.splice(i, 1); }
     });
-
-    camera.position.z = ball.position.z + 14;
-    camera.position.x = ball.position.x * 0.5;
-    camera.position.y = isFlying ? 50 : 8 + Math.max(0, -ball.position.y * 0.2);
+    camera.position.z = ball.position.z + 14; camera.position.x = ball.position.x * 0.5; camera.position.y = isFlying ? 50 : 8 + Math.max(0, -ball.position.y * 0.2);
     camera.lookAt(ball.position.x, ball.position.y, ball.position.z - 10);
 }
 
 function gameOver() {
     state = 'GAMEOVER';
-    if (bgMusic) {
-        bgMusic.pause();
-    }
+    if (bgMusic && bgMusic.isPlaying) bgMusic.pause();
     finalScore.innerText = score;
     localStorage.setItem('highScore', highScore);
-    saveUserDataToCloud(); // Sync to cloud
+    saveUserDataToCloud();
     gameOverOverlay.style.display = 'flex';
     reviveContainer.style.display = coins >= REVIVE_COST ? 'block' : 'none';
 }
@@ -829,4 +641,3 @@ function animate() {
 }
 
 init();
-
