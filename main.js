@@ -322,6 +322,8 @@ function clearWorld() {
         arr.forEach(o => scene.remove(o));
         arr.length = 0;
     });
+    flightTrail.forEach(t => scene.remove(t.mesh));
+    flightTrail.length = 0;
 }
 
 function reviveGame() {
@@ -564,9 +566,32 @@ function updatePhysics() {
     ball.rotation.z -= sideMove / BALL_RADIUS;
     if (isFlying) {
         flightTimer -= 1/60; ballVelocity.y = 0; ball.position.y = THREE.MathUtils.lerp(ball.position.y, 40, 0.05);
-        ball.material.emissive.setHSL(Date.now() % 1000 / 1000, 1, 0.5);
+        const hue = (Date.now() % 1000) / 1000;
+        ball.material.emissive.setHSL(hue, 1, 0.5);
+        
+        // Trail spawn (dot)
+        if (Math.floor(Date.now() / 50) % 2 === 0) {
+            const dotGeo = new THREE.SphereGeometry(0.3, 8, 8);
+            const dotMat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue, 1, 0.5) });
+            const dot = new THREE.Mesh(dotGeo, dotMat);
+            dot.position.copy(ball.position);
+            scene.add(dot);
+            flightTrail.push({ mesh: dot, life: 1.0 });
+        }
+
         if (flightTimer <= 0) { isFlying = false; ball.material.emissive.setHex(0x000000); }
     } else { ballVelocity.y += GRAVITY; ball.position.y += ballVelocity.y; }
+
+    // Update trail
+    for (let i = flightTrail.length - 1; i >= 0; i--) {
+        const t = flightTrail[i];
+        t.life -= 0.02;
+        t.mesh.scale.setScalar(t.life);
+        if (t.life <= 0) {
+            scene.remove(t.mesh);
+            flightTrail.splice(i, 1);
+        }
+    }
     floorTiles.forEach(tile => {
         if (Math.abs(ball.position.z - tile.position.z) < TILE_SIZE / 2 + BALL_RADIUS) {
             if (Math.abs(ball.position.x) < TRACK_WIDTH / 2 + BALL_RADIUS) {

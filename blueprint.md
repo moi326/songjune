@@ -24,7 +24,7 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
         - **Closing Gates:** Walls that slide together and apart.
     - **Items & Pads:**
         - **Jump Pads:** Propel the ball over gaps or into tunnels.
-        - **Super Jump (Rainbow Pad):** Launches the ball high into the sky, triggering 10 seconds of flight with a neon trail.
+        - **Super Jump (Rainbow Pad):** Launches the ball high into the sky, triggering 10 seconds of flight with a dynamic neon dot trail that cycles through colors.
         - **Score Pads (Negative):** Red glowing pads that subtract points (-10 to -50) when touched.
         - **Titan Orb:** A glowing blue item that makes the ball 3x larger and invincible, destroying obstacles on contact for 8 seconds.
         - **Boost Pad:** A glowing cyan chevron pad that drastically increases speed and warps the camera FOV for 3 seconds.
