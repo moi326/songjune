@@ -9,7 +9,7 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
 *   **3D Environment:** A stylized 3D world with a perspective camera following the ball. Features a "thrilling" bottom floor for falling sequences.
 *   **Player Controls:**
     - **Move Left/Right:** Arrow keys or A/D. The ball can now fall off the sides of the track!
-    - **Start/Restart:** Spacebar.
+    - **Start/Restart:** Spacebar or **Click/Tap anywhere on the overlay**.
 *   **Core Mechanics:**
     - **Forward Momentum:** The ball moves forward automatically, speeding up as the score increases.
     - **Ball Physics:** Realistic rolling animation with visual rotation.
@@ -57,7 +57,7 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
 
 ### UI (HUD & Overlays)
 - **Top Score:** Real-time distance tracking.
-- **Start/Game Over Overlay:** A centered message with a backdrop blur for "Press Space to Start/Restart".
+- **Start/Game Over Overlay:** A centered message with a backdrop blur for "Press Space or Click to Start/Restart". Interactive and supports pointer events.
 
 ### Three.js Components
 - **Renderer:** WebGLRenderer with high-quality settings.
@@ -86,4 +86,4 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
     - Create the player and track.
     - Implement obstacle and jump pad spawning logic.
     - Implement the core game loop (movement, collisions, scoring).
-    - Add the "Space to Start" mechanism.
+    - Add the "Space or Click to Start" mechanism.

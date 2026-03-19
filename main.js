@@ -261,6 +261,16 @@ function init() {
     window.addEventListener('resize', onWindowResize);
     reviveButton.addEventListener('click', reviveGame);
 
+    startOverlay.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        handleSpacePress();
+    });
+
+    gameOverOverlay.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        handleSpacePress();
+    });
+
     document.addEventListener('mousedown', () => {
         if (audioListener.context.state === 'suspended') audioListener.context.resume();
     });

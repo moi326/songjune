@@ -199,6 +199,8 @@ body, html {
     align-items: center;
     backdrop-filter: blur(8px);
     transition: opacity 0.5s ease;
+    pointer-events: auto;
+    cursor: pointer;
 }
 
 .overlay-content {
