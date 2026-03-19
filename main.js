@@ -197,10 +197,11 @@ function init() {
     camera.position.set(0, 8, 12);
     camera.lookAt(0, 0, 0);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
     // Audio Initialization
@@ -220,20 +221,20 @@ function init() {
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(30, 50, 30);
     dirLight.castShadow = true;
-    dirLight.shadow.camera.left = -100;
-    dirLight.shadow.camera.right = 100;
-    dirLight.shadow.camera.top = 100;
-    dirLight.shadow.camera.bottom = -100;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.left = -50;
+    dirLight.shadow.camera.right = 50;
+    dirLight.shadow.camera.top = 50;
+    dirLight.shadow.camera.bottom = -50;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
 
-    const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
+    const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 24, 24);
     const ballMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, roughness: 0.2, metalness: 0.5 });
     ball = new THREE.Mesh(ballGeo, ballMat);
     ball.castShadow = true;
     
-    const stripeGeo = new THREE.TorusGeometry(BALL_RADIUS, 0.05, 16, 100);
+    const stripeGeo = new THREE.TorusGeometry(BALL_RADIUS, 0.03, 8, 48);
     const stripeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const stripe1 = new THREE.Mesh(stripeGeo, stripeMat);
     const stripe2 = new THREE.Mesh(stripeGeo, stripeMat);
@@ -329,11 +330,25 @@ function resetGame() {
 
 function clearWorld() {
     [obstacles, jumpPads, superJumpPads, scorePads, coinMeshes, floorTiles, tunnels, titanOrbs, boostPads].forEach(arr => {
-        arr.forEach(o => scene.remove(o));
+        arr.forEach(o => removeAndDispose(o));
         arr.length = 0;
     });
-    flightTrail.forEach(t => scene.remove(t.mesh));
+    flightTrail.forEach(t => removeAndDispose(t.mesh));
     flightTrail.length = 0;
+}
+
+function removeAndDispose(obj) {
+    if (!obj) return;
+    scene.remove(obj);
+    obj.traverse(child => {
+        if (child.isMesh) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+                if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                else child.material.dispose();
+            }
+        }
+    });
 }
 
 function reviveGame() {
@@ -477,6 +492,8 @@ function spawnObstacle(z) {
     if (mesh) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
+        mesh.updateMatrixWorld();
+        mesh.userData.boundingBox = new THREE.Box3().setFromObject(mesh);
         scene.add(mesh);
         obstacles.push(mesh);
     }
@@ -485,6 +502,8 @@ function spawnObstacle(z) {
 function spawnJumpPad(z, force = false) {
     const pad = new THREE.Mesh(new THREE.BoxGeometry(4, 0.4, 4), new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 1 }));
     pad.position.set(force ? 0 : (Math.random() - 0.5) * (TRACK_WIDTH - 4), 0.1, z);
+    pad.updateMatrixWorld();
+    pad.userData.boundingBox = new THREE.Box3().setFromObject(pad);
     scene.add(pad);
     jumpPads.push(pad);
 }
@@ -495,6 +514,8 @@ function spawnSuperJumpPad(z) {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(3, 0.1, 16, 100), new THREE.MeshBasicMaterial({ color: 0xffff00 }));
     ring.rotation.x = Math.PI / 2;
     pad.add(ring);
+    pad.updateMatrixWorld();
+    pad.userData.boundingBox = new THREE.Box3().setFromObject(pad);
     scene.add(pad);
     superJumpPads.push(pad);
 }
@@ -508,6 +529,8 @@ function spawnScorePad(z) {
     const sprite = createTextSprite("-" + val);
     sprite.position.y = 2;
     pad.add(sprite);
+    pad.updateMatrixWorld();
+    pad.userData.boundingBox = new THREE.Box3().setFromObject(pad);
     scene.add(pad);
     scorePads.push(pad);
 }
@@ -525,7 +548,7 @@ function createTextSprite(text) {
 }
 
 function spawnCoin(z) {
-    const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.15, 16), new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1, emissive: 0xffd700, emissiveIntensity: 0.5 }));
+    const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.15, 12), new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1, emissive: 0xffd700, emissiveIntensity: 0.5 }));
     coin.rotation.x = Math.PI / 2;
     coin.position.set((Math.random() - 0.5) * (TRACK_WIDTH - 2), 1, z);
     scene.add(coin);
@@ -535,6 +558,8 @@ function spawnCoin(z) {
 function spawnTitanOrb(z) {
     const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8, 0), new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: true, emissive: 0x00ffff, emissiveIntensity: 2 }));
     orb.position.set((Math.random() - 0.5) * (TRACK_WIDTH - 2), 1.5, z);
+    orb.updateMatrixWorld();
+    orb.userData.boundingBox = new THREE.Box3().setFromObject(orb);
     scene.add(orb);
     titanOrbs.push(orb);
 }
@@ -547,6 +572,8 @@ function spawnBoostPad(z) {
     const arrow1 = new THREE.Mesh(arrowGeo, arrowMat); arrow1.rotation.x = -Math.PI / 2; arrow1.position.set(0, 0.2, 1);
     const arrow2 = new THREE.Mesh(arrowGeo, arrowMat); arrow2.rotation.x = -Math.PI / 2; arrow2.position.set(0, 0.2, -2);
     pad.add(arrow1, arrow2);
+    pad.updateMatrixWorld();
+    pad.userData.boundingBox = new THREE.Box3().setFromObject(pad);
     scene.add(pad);
     boostPads.push(pad);
 }
@@ -556,6 +583,9 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
+
+const ballSphere = new THREE.Sphere();
+const tempBox = new THREE.Box3();
 
 function updatePhysics() {
     if (state !== 'PLAYING') return;
@@ -574,12 +604,15 @@ function updatePhysics() {
     ball.position.x += sideMove;
     ball.rotation.x -= currentSpeed / BALL_RADIUS;
     ball.rotation.z -= sideMove / BALL_RADIUS;
+    
+    ballSphere.center.copy(ball.position);
+    ballSphere.radius = isTitan ? BALL_RADIUS * 3 : BALL_RADIUS;
+
     if (isFlying) {
         flightTimer -= 1/60; ballVelocity.y = 0; ball.position.y = THREE.MathUtils.lerp(ball.position.y, 40, 0.05);
         const hue = (Date.now() % 1000) / 1000;
         ball.material.emissive.setHSL(hue, 1, 0.5);
         
-        // Trail spawn (dot)
         if (Math.floor(Date.now() / 50) % 2 === 0) {
             const dotGeo = new THREE.SphereGeometry(0.3, 8, 8);
             const dotMat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue, 1, 0.5) });
@@ -592,13 +625,12 @@ function updatePhysics() {
         if (flightTimer <= 0) { isFlying = false; ball.material.emissive.setHex(0x000000); }
     } else { ballVelocity.y += GRAVITY; ball.position.y += ballVelocity.y; }
 
-    // Update trail
     for (let i = flightTrail.length - 1; i >= 0; i--) {
         const t = flightTrail[i];
         t.life -= 0.02;
         t.mesh.scale.setScalar(t.life);
         if (t.life <= 0) {
-            scene.remove(t.mesh);
+            removeAndDispose(t.mesh);
             flightTrail.splice(i, 1);
         }
     }
@@ -615,16 +647,27 @@ function updatePhysics() {
     obstacles.forEach(o => {
         if (o.userData) {
             const time = Date.now() * (o.userData.speed || o.userData.bounceSpeed || 0.002) + o.userData.timeOffset;
-            if (o.userData.isMoving) { o.position.x += o.userData.speed; if (Math.abs(o.position.x) > TRACK_WIDTH / 2 - 1) o.userData.speed *= -1; }
-            else if (o.userData.isCrusher) o.position.y = 1.0 + Math.abs(Math.sin(time)) * 5;
+            if (o.userData.isMoving) { 
+                o.position.x += o.userData.speed; 
+                if (Math.abs(o.position.x) > TRACK_WIDTH / 2 - 1) o.userData.speed *= -1; 
+                o.userData.boundingBox.setFromObject(o);
+            }
+            else if (o.userData.isCrusher) {
+                o.position.y = 1.0 + Math.abs(Math.sin(time)) * 5;
+                o.userData.boundingBox.setFromObject(o);
+            }
             else if (o.userData.isWindmill) { o.rotation.y += o.userData.speed; o.rotation.z += o.userData.speed; }
-            else if (o.userData.isBouncer) o.position.y = o.userData.startY + Math.abs(Math.sin(time)) * o.userData.height;
+            else if (o.userData.isBouncer) {
+                o.position.y = o.userData.startY + Math.abs(Math.sin(time)) * o.userData.height;
+                o.userData.boundingBox.setFromObject(o);
+            }
             else if (o.userData.isLaser) o.visible = Math.sin(time) > 0;
             else if (o.userData.isPendulum) o.rotation.z = Math.sin(time) * o.userData.angle;
             else if (o.userData.isGates) {
                 const offset = Math.abs(Math.sin(time)) * 4;
                 o.userData.leftGate.position.x = -TRACK_WIDTH / 4 - 2 + offset;
                 o.userData.rightGate.position.x = TRACK_WIDTH / 4 + 2 - offset;
+                o.userData.boundingBox.setFromObject(o);
             }
         }
     });
@@ -635,25 +678,26 @@ function updatePhysics() {
     if (Math.abs(nextSpawnZ % COIN_SPAWN_INTERVAL) < currentSpeed) spawnCoin(nextSpawnZ);
     if (Math.abs(nextSpawnZ % 300) < currentSpeed) spawnTitanOrb(nextSpawnZ);
     if (Math.abs(nextSpawnZ % 100) < currentSpeed) spawnBoostPad(nextSpawnZ);
+    
     if (!isFlying) {
         obstacles = obstacles.filter(o => {
             if (!o.visible) return true;
-            const box = new THREE.Box3().setFromObject(o);
-            if (box.intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) {
-                if (isTitan) { scene.remove(o); return false; } else { gameOver(); }
+            if (o.userData.boundingBox.intersectsSphere(ballSphere)) {
+                if (isTitan) { removeAndDispose(o); return false; } else { gameOver(); }
             }
             return true;
         });
     }
-    jumpPads.forEach(j => { if (new THREE.Box3().setFromObject(j).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) ballVelocity.y = JUMP_IMPULSE * 1.5; });
-    superJumpPads.forEach(s => { if (new THREE.Box3().setFromObject(s).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) { ballVelocity.y = SUPER_JUMP_IMPULSE; isFlying = true; flightTimer = FLIGHT_DURATION; } });
-    scorePads = scorePads.filter(p => { if (new THREE.Box3().setFromObject(p).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) { scoreBonus -= p.userData.scorePenalty; scene.remove(p); return false; } return true; });
-    titanOrbs = titanOrbs.filter(t => { t.rotation.y += 0.05; if (new THREE.Box3().setFromObject(t).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) { isTitan = true; titanTimer = 8; ball.scale.set(3, 3, 3); scene.remove(t); return false; } return true; });
-    boostPads.forEach(b => { if (new THREE.Box3().setFromObject(b).intersectsSphere(new THREE.Sphere(ball.position, isTitan ? BALL_RADIUS * 3 : BALL_RADIUS))) { isBoosting = true; boostTimer = 3; } });
-    coinMeshes = coinMeshes.filter(c => { if (ball.position.distanceTo(c.position) < (isTitan ? BALL_RADIUS * 3 : BALL_RADIUS) + 0.6) { coins += 10; localStorage.setItem('totalCoins', coins); coinValue.innerText = coins; saveUserDataToCloud(); scene.remove(c); return false; } return true; });
+    jumpPads.forEach(j => { if (j.userData.boundingBox.intersectsSphere(ballSphere)) ballVelocity.y = JUMP_IMPULSE * 1.5; });
+    superJumpPads.forEach(s => { if (s.userData.boundingBox.intersectsSphere(ballSphere)) { ballVelocity.y = SUPER_JUMP_IMPULSE; isFlying = true; flightTimer = FLIGHT_DURATION; } });
+    scorePads = scorePads.filter(p => { if (p.userData.boundingBox.intersectsSphere(ballSphere)) { scoreBonus -= p.userData.scorePenalty; removeAndDispose(p); return false; } return true; });
+    titanOrbs = titanOrbs.filter(t => { t.rotation.y += 0.05; if (t.userData.boundingBox.intersectsSphere(ballSphere)) { isTitan = true; titanTimer = 8; ball.scale.set(3, 3, 3); removeAndDispose(t); return false; } return true; });
+    boostPads.forEach(b => { if (b.userData.boundingBox.intersectsSphere(ballSphere)) { isBoosting = true; boostTimer = 3; } });
+    coinMeshes = coinMeshes.filter(c => { if (ball.position.distanceTo(c.position) < ballSphere.radius + 0.6) { coins += 10; localStorage.setItem('totalCoins', coins); coinValue.innerText = coins; saveUserDataToCloud(); removeAndDispose(c); return false; } return true; });
+    
     const cleanupZ = ball.position.z + 50;
     [floorTiles, obstacles, jumpPads, superJumpPads, scorePads, coinMeshes, tunnels, titanOrbs, boostPads].forEach(arr => {
-        for(let i=arr.length-1; i>=0; i--) if (arr[i].position.z > cleanupZ) { scene.remove(arr[i]); arr.splice(i, 1); }
+        for(let i=arr.length-1; i>=0; i--) if (arr[i].position.z > cleanupZ) { removeAndDispose(arr[i]); arr.splice(i, 1); }
     });
     camera.position.z = ball.position.z + 14; camera.position.x = ball.position.x * 0.5; camera.position.y = isFlying ? 50 : 8 + Math.max(0, -ball.position.y * 0.2);
     camera.lookAt(ball.position.x, ball.position.y, ball.position.z - 10);

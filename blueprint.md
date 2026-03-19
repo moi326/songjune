@@ -59,15 +59,11 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
 - **Top Score:** Real-time distance tracking.
 - **Start/Game Over Overlay:** A centered message with a backdrop blur for "Press Space or Click to Start/Restart". Interactive and supports pointer events.
 
-### Three.js Components
-- **Renderer:** WebGLRenderer with high-quality settings.
+### Three.js Components (Optimized)
+- **Renderer:** WebGLRenderer with `powerPreference: "high-performance"` and optimized pixel ratio (max 2).
 - **Camera:** Perspective camera positioned behind and slightly above the ball.
-- **Lighting:** Ambient light for basic visibility + Directional light for shadows and depth.
-- **Objects:**
-    - **Player:** A sphere with a distinct material.
-    - **Track:** A long plane or procedural segment-based track.
-    - **Obstacles:** Randomly spawned meshes.
-    - **Jump Pads:** Distinctly colored areas on the track with simple collision logic to apply vertical velocity.
+- **Lighting:** Optimized Directional light with 1024x1024 shadow maps and constrained frustum.
+- **Memory Management:** Explicit `dispose()` calls for geometries and materials of off-screen objects to prevent GPU memory leaks.
 
 ### Logic & Physics
 - **Game State Machine:** `START`, `PLAYING`, `GAMEOVER`.
@@ -75,15 +71,10 @@ A high-performance, immersive 3D rolling ball game built with Three.js. The play
     - `z-position` increases (or decreases) constantly.
     - `x-position` modified by user input (clamped to track width).
     - `y-position` managed by simple gravity and jump pad impulses.
-- **Collision Detection:** Bounding volume checks for obstacles and track boundaries.
+- **Collision Detection (Optimized):** Uses pre-computed `Box3` bounding boxes stored in `userData` to avoid expensive `setFromObject()` calls in the game loop. Reuses mathematical objects (`Sphere`, `Box3`) to minimize GC pressure.
 
-## Plan for Current Task
+## Current Progress & Optimization
 
-1.  **Refactor `index.html`**: Clean up structure and add Three.js CDN.
-2.  **Style `style.css`**: Create a polished UI for the score and overlays.
-3.  **Implement `main.js`**:
-    - Setup the Three.js scene.
-    - Create the player and track.
-    - Implement obstacle and jump pad spawning logic.
-    - Implement the core game loop (movement, collisions, scoring).
-    - Add the "Space or Click to Start" mechanism.
+1.  **Memory Leak Fix:** Implemented a global disposal system for all 3D entities.
+2.  **Collision Efficiency:** Switched to cached bounding volume checks.
+3.  **Rendering Performance:** Fine-tuned pixel ratio and shadow map settings for stable 60 FPS.
