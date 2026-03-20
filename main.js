@@ -249,10 +249,15 @@ function reviveGame() {
 }
 
 function spawnFloorRow(z) {
-    const isGap = z < -40 && Math.abs(z % GAP_SPAWN_INTERVAL) < TILE_SIZE * (2 + Math.floor(score/500));
+    const gapThreshold = TILE_SIZE * (5 + Math.floor(score/1000));
+    const isGap = z < -40 && Math.abs(z % GAP_SPAWN_INTERVAL) < gapThreshold;
+    const wasPrevGap = (z + TILE_SIZE) < -40 && Math.abs((z + TILE_SIZE) % GAP_SPAWN_INTERVAL) < gapThreshold;
+
     if (isGap) {
-        if (Math.abs(z % GAP_SPAWN_INTERVAL) < TILE_SIZE) {
-            if (Math.random() > 0.6) spawnSuperJumpPad(z + TILE_SIZE); else spawnJumpPad(z + TILE_SIZE, true);
+        // Detect the very first gap tile and spawn a helping pad on the PREVIOUS (solid) tile
+        if (!wasPrevGap) {
+            if (Math.random() > 0.5) spawnSuperJumpPad(z + TILE_SIZE); 
+            else spawnJumpPad(z + TILE_SIZE, true);
         }
         return;
     }
