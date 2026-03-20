@@ -397,8 +397,15 @@ function updatePhysics() {
             const d = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(h, 1, 0.5) }));
             d.position.copy(ball.position); scene.add(d); flightTrail.push({ mesh: d, life: 1.0 });
         }
-        if (flightTimer <= 0) { isFlying = false; ball.material.emissive.setHex(0x000000); }
-    } else { ballVelocity.y += GRAVITY; ball.position.y += ballVelocity.y; }
+        if (flightTimer <= 0) { 
+            isFlying = false; 
+            ball.material.emissive.setHex(0x000000); 
+            ballVelocity.y = 0; // Reset velocity when flight ends
+        }
+    } else { 
+        ballVelocity.y += GRAVITY; 
+        ball.position.y += ballVelocity.y; 
+    }
 
     for(let i=flightTrail.length-1; i>=0; i--) {
         const t = flightTrail[i]; t.life -= 0.02; t.mesh.scale.setScalar(t.life);
@@ -406,7 +413,11 @@ function updatePhysics() {
     }
     floorTiles.forEach(tile => {
         if (Math.abs(ball.position.z - tile.position.z) < TILE_SIZE/2 + BALL_RADIUS && Math.abs(ball.position.x) < TRACK_WIDTH/2 + BALL_RADIUS) {
-            if (ball.position.y - BALL_RADIUS <= 0 && ball.position.y - BALL_RADIUS > -1 && ballVelocity.y <= 0 && !isFlying) { ball.position.y = BALL_RADIUS; ballVelocity.y = 0; }
+            // More robust floor collision: if below floor surface and falling
+            if (ball.position.y - BALL_RADIUS <= 0.1 && ballVelocity.y <= 0 && !isFlying) { 
+                ball.position.y = BALL_RADIUS; 
+                ballVelocity.y = 0; 
+            }
         }
     });
     if (ball.position.y < -90) gameOver();
@@ -445,7 +456,13 @@ function updatePhysics() {
         });
     }
     jumpPads.forEach(j => { if (j.userData.boundingBox && j.userData.boundingBox.intersectsSphere(ballSphere)) ballVelocity.y = JUMP_IMPULSE * 1.5; });
-    superJumpPads.forEach(s => { if (s.userData.boundingBox && s.userData.boundingBox.intersectsSphere(ballSphere)) { ballVelocity.y = SUPER_JUMP_IMPULSE; isFlying = true; flightTimer = FLIGHT_DURATION; } });
+    superJumpPads.forEach(s => { 
+        if (s.userData.boundingBox && s.userData.boundingBox.intersectsSphere(ballSphere)) { 
+            ballVelocity.set(0, 0, 0); // Complete physics reset for a clean start
+            isFlying = true; 
+            flightTimer = FLIGHT_DURATION; 
+        } 
+    });
     scorePads = scorePads.filter(p => { if (p.userData.boundingBox && p.userData.boundingBox.intersectsSphere(ballSphere)) { scoreBonus -= p.userData.scorePenalty; removeAndDispose(p); return false; } return true; });
     titanOrbs = titanOrbs.filter(t => { t.rotation.y += 0.05; if (t.userData.boundingBox && t.userData.boundingBox.intersectsSphere(ballSphere)) { isTitan = true; titanTimer = 8; ball.scale.set(3, 3, 3); removeAndDispose(t); return false; } return true; });
     boostPads.forEach(b => { if (b.userData.boundingBox && b.userData.boundingBox.intersectsSphere(ballSphere)) { isBoosting = true; boostTimer = 3; } });
