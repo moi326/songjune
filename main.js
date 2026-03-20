@@ -38,14 +38,16 @@ const GEOS = {
     scorePad: new THREE.BoxGeometry(3, 0.2, 3),
     titan: new THREE.IcosahedronGeometry(0.8, 0),
     boost: new THREE.BoxGeometry(4, 0.2, 8),
-    arrow: new THREE.ConeGeometry(1.5, 2, 3)
+    arrow: new THREE.ConeGeometry(1.5, 2, 3),
+    rim: new THREE.PlaneGeometry(TRACK_WIDTH, TILE_SIZE)
 };
 
 const MATS = {
-    tile: new THREE.MeshStandardMaterial({ color: 0x223344 }),
+    tile: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8 }),
+    rim: new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.4 }),
     ball: new THREE.MeshStandardMaterial({ color: 0x00ffcc, roughness: 0.2, metalness: 0.5 }),
     stripe: new THREE.MeshBasicMaterial({ color: 0x000000 }),
-    bottom: new THREE.MeshStandardMaterial({ color: 0x111122, transparent: true, opacity: 0.5 }),
+    bottom: new THREE.MeshStandardMaterial({ color: 0x0a0a20, transparent: true, opacity: 0.4 }),
     coin: new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1, emissive: 0xffd700, emissiveIntensity: 0.5 }),
     jump: new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 1 }),
     superJump: new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff00ff, emissiveIntensity: 2 }),
@@ -70,10 +72,14 @@ let isTitan = false, titanTimer = 0;
 let isBoosting = false, boostTimer = 0;
 let isMuted = false;
 let scene, camera, renderer, ball, dirLight, audioListener, bgMusic;
+let sfxCoin, sfxJump, sfxGameOver;
 let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [];
 let keys = {};
 let ballVelocity = new THREE.Vector3(0, 0, 0);
 const MUSIC_URL = 'https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a7348a.mp3';
+const COIN_SFX_URL = 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg';
+const JUMP_SFX_URL = 'https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg';
+const OVER_SFX_URL = 'https://actions.google.com/sounds/v1/impacts/crash_metal.ogg';
 
 // --- ELEMENTS ---
 const scoreValue = document.getElementById('score-value');
@@ -161,11 +167,19 @@ function init() {
     audioListener = new THREE.AudioListener();
     camera.add(audioListener);
     bgMusic = new THREE.Audio(audioListener);
-    new THREE.AudioLoader().load(MUSIC_URL, (b) => { 
+    sfxCoin = new THREE.Audio(audioListener);
+    sfxJump = new THREE.Audio(audioListener);
+    sfxGameOver = new THREE.Audio(audioListener);
+
+    const audioLoader = new THREE.AudioLoader();
+    audioLoader.load(MUSIC_URL, (b) => { 
         bgMusic.setBuffer(b); 
         bgMusic.setLoop(true); 
         bgMusic.setVolume(0.5); 
     });
+    audioLoader.load(COIN_SFX_URL, (b) => sfxCoin.setBuffer(b));
+    audioLoader.load(JUMP_SFX_URL, (b) => sfxJump.setBuffer(b));
+    audioLoader.load(OVER_SFX_URL, (b) => sfxGameOver.setBuffer(b));
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.4));
     dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -185,7 +199,7 @@ function init() {
     const bottomFloor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), MATS.bottom);
     bottomFloor.rotation.x = -Math.PI/2; bottomFloor.position.y = -100;
     scene.add(bottomFloor);
-    const grid = new THREE.GridHelper(1000, 50, 0x4444ff, 0x222244);
+    const grid = new THREE.GridHelper(1000, 40, 0x00ffff, 0xff00ff);
     grid.position.y = -99.9; scene.add(grid);
 
     window.addEventListener('keydown', (e) => { keys[e.code] = true; if (e.code === 'Space') handleSpacePress(); });
@@ -202,14 +216,23 @@ function init() {
 
 function toggleSound() {
     isMuted = !isMuted;
+    const vol = isMuted ? 0 : 0.5;
+    const sfxVol = isMuted ? 0 : 0.8;
     if (bgMusic) {
-        if (isMuted) { bgMusic.setVolume(0); if (soundToggle) soundToggle.innerText = "🔇 Sound Off"; }
-        else { bgMusic.setVolume(0.5); if (soundToggle) soundToggle.innerText = "🔊 Sound On"; if (state === 'PLAYING') bgMusic.play(); }
+        bgMusic.setVolume(vol);
+        if (soundToggle) soundToggle.innerText = isMuted ? "🔇 Sound Off" : "🔊 Sound On";
+        if (!isMuted && state === 'PLAYING' && !bgMusic.isPlaying) bgMusic.play();
     }
+    if (sfxCoin) sfxCoin.setVolume(sfxVol);
+    if (sfxJump) sfxJump.setVolume(sfxVol);
+    if (sfxGameOver) sfxGameOver.setVolume(sfxVol);
 }
 
 function handleSpacePress() { 
     if (state === 'START' || state === 'GAMEOVER') { 
+        if (THREE.AudioContext.getContext().state === 'suspended') {
+            THREE.AudioContext.getContext().resume();
+        }
         if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play(); 
         resetGame(); 
     } 
@@ -263,6 +286,13 @@ function spawnFloorRow(z) {
     }
     const tile = new THREE.Mesh(GEOS.tile, MATS.tile);
     tile.position.set(0, -0.25, z); tile.receiveShadow = true;
+    
+    // Add neon grid rim
+    const rim = new THREE.Mesh(GEOS.rim, MATS.rim);
+    rim.rotation.x = -Math.PI / 2;
+    rim.position.set(0, 0.01, 0); // slightly above tile
+    tile.add(rim);
+
     scene.add(tile); floorTiles.push(tile);
     if (Math.abs(z) > 100 && Math.random() > 0.96) spawnScorePad(z);
     if (z < -100 && Math.abs(z % TUNNEL_SPAWN_INTERVAL) < TILE_SIZE) spawnTunnel(z);
@@ -460,12 +490,18 @@ function updatePhysics() {
             return true;
         });
     }
-    jumpPads.forEach(j => { if (j.userData.boundingBox && j.userData.boundingBox.intersectsSphere(ballSphere)) ballVelocity.y = JUMP_IMPULSE * 1.5; });
+    jumpPads.forEach(j => { 
+        if (j.userData.boundingBox && j.userData.boundingBox.intersectsSphere(ballSphere)) {
+            ballVelocity.y = JUMP_IMPULSE * 1.5; 
+            if (sfxJump && !isMuted) { if (sfxJump.isPlaying) sfxJump.stop(); sfxJump.play(); }
+        }
+    });
     superJumpPads.forEach(s => { 
         if (s.userData.boundingBox && s.userData.boundingBox.intersectsSphere(ballSphere)) { 
             ballVelocity.set(0, 0, 0); // Complete physics reset for a clean start
             isFlying = true; 
             flightTimer = FLIGHT_DURATION; 
+            if (sfxJump && !isMuted) { if (sfxJump.isPlaying) sfxJump.stop(); sfxJump.play(); }
         } 
     });
     scorePads = scorePads.filter(p => { if (p.userData.boundingBox && p.userData.boundingBox.intersectsSphere(ballSphere)) { scoreBonus -= p.userData.scorePenalty; removeAndDispose(p); return false; } return true; });
@@ -476,6 +512,7 @@ function updatePhysics() {
         if (ball.position.distanceTo(c.position) < ballSphere.radius + 0.6) { 
             coins += 10; 
             localStorage.setItem('totalCoins', coins);
+            if (sfxCoin && !isMuted) { if (sfxCoin.isPlaying) sfxCoin.stop(); sfxCoin.play(); }
             removeAndDispose(c); return false; 
         } 
         return true; 
@@ -493,11 +530,21 @@ function updatePhysics() {
 
 function gameOver() {
     state = 'GAMEOVER'; if (bgMusic && bgMusic.isPlaying) bgMusic.pause();
+    if (sfxGameOver && !isMuted) sfxGameOver.play();
     if (finalScore) finalScore.innerText = score; 
     localStorage.setItem('highScore', highScore); saveUserDataToCloud();
     if (gameOverOverlay) gameOverOverlay.style.display = 'flex'; 
     if (reviveContainer) reviveContainer.style.display = coins >= REVIVE_COST ? 'block' : 'none';
 }
 
-function animate() { requestAnimationFrame(animate); updatePhysics(); renderer.render(scene, camera); }
+function animate() { 
+    requestAnimationFrame(animate); 
+    updatePhysics(); 
+    
+    // Pulse floor rims
+    const time = Date.now() * 0.002;
+    MATS.rim.opacity = 0.3 + Math.abs(Math.sin(time)) * 0.4;
+
+    renderer.render(scene, camera); 
+}
 init();
