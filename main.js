@@ -73,6 +73,7 @@ let isBoosting = false, boostTimer = 0;
 let isMuted = false;
 let scene, camera, renderer, ball, dirLight, audioListener, bgMusic;
 let sfxCoin, sfxJump, sfxGameOver, sfxLand;
+let starfield, bottomFloor, grid;
 let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [];
 let keys = {};
 let ballVelocity = new THREE.Vector3(0, 0, 0);
@@ -199,10 +200,20 @@ function init() {
     s2.rotation.y = Math.PI/2; ball.add(s1, s2);
     scene.add(ball);
 
-    const bottomFloor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), MATS.bottom);
+    // Starfield
+    const starGeo = new THREE.BufferGeometry();
+    const starCoords = [];
+    for(let i=0; i<2000; i++) {
+        starCoords.push((Math.random()-0.5)*1500, (Math.random()-0.5)*1500, (Math.random()-0.5)*1500);
+    }
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
+    starfield = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.7 }));
+    scene.add(starfield);
+
+    bottomFloor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), MATS.bottom);
     bottomFloor.rotation.x = -Math.PI/2; bottomFloor.position.y = -100;
     scene.add(bottomFloor);
-    const grid = new THREE.GridHelper(1000, 40, 0x00ffff, 0xff00ff);
+    grid = new THREE.GridHelper(1000, 40, 0x00ffff, 0xff00ff);
     grid.position.y = -99.9; scene.add(grid);
 
     window.addEventListener('keydown', (e) => { keys[e.code] = true; if (e.code === 'Space') handleSpacePress(); });
@@ -545,6 +556,12 @@ function updatePhysics() {
     });
 
     if (dirLight) { dirLight.position.z = ball.position.z + 30; dirLight.target.position.copy(ball.position); dirLight.target.updateMatrixWorld(); }
+    
+    // Background follow
+    if (starfield) starfield.position.z = ball.position.z;
+    if (bottomFloor) bottomFloor.position.z = ball.position.z;
+    if (grid) grid.position.z = ball.position.z;
+
     camera.position.z = ball.position.z + 14; camera.position.x = ball.position.x * 0.5; camera.position.y = isFlying ? 50 : 8 + Math.max(0, -ball.position.y * 0.2);
     camera.lookAt(ball.position.x, ball.position.y, ball.position.z - 10);
 }
