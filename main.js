@@ -27,7 +27,7 @@ const REVIVE_COST = 300;
 const GAP_SPAWN_INTERVAL = 120;
 const TUNNEL_SPAWN_INTERVAL = 200;
 
-// --- SHARED ASSETS (Performance: Reuse Geometries and Materials) ---
+// --- SHARED ASSETS ---
 const GEOS = {
     tile: new THREE.BoxGeometry(TRACK_WIDTH, 0.5, TILE_SIZE),
     ball: new THREE.SphereGeometry(BALL_RADIUS, 24, 24),
@@ -57,7 +57,6 @@ const MATS = {
     neon: new THREE.MeshBasicMaterial({ color: 0x00ffff })
 };
 
-// Texture Cache for Score Pads
 const scoreTextureCache = {};
 
 // --- GAME STATE ---
@@ -72,7 +71,8 @@ let isBoosting = false, boostTimer = 0;
 let isMuted = false;
 let scene, camera, renderer, ball, dirLight, audioListener, bgMusic;
 let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [];
-let keys = {}, ballVelocity = new THREE.Vector3();
+let keys = {};
+let ballVelocity = new THREE.Vector3(0, 0, 0);
 const MUSIC_URL = 'https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a7348a.mp3';
 
 // --- ELEMENTS ---
@@ -81,6 +81,7 @@ const highScoreValue = document.getElementById('high-score-value');
 const coinValue = document.getElementById('coin-value');
 const finalScore = document.getElementById('final-score');
 const startOverlay = document.getElementById('overlay');
+const startBtn = document.getElementById('start-btn');
 const gameOverOverlay = document.getElementById('game-over-overlay');
 const reviveContainer = document.getElementById('revive-container');
 const reviveButton = document.getElementById('revive-button');
@@ -98,20 +99,21 @@ function initAuth() {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentUser = user;
-            loginBtn.style.display = 'none';
-            userProfile.style.display = 'flex';
-            userNameDisplay.innerText = user.displayName || "Player";
-            userPhotoDisplay.src = user.photoURL || "";
+            if (loginBtn) loginBtn.style.display = 'none';
+            if (userProfile) userProfile.style.display = 'flex';
+            if (userNameDisplay) userNameDisplay.innerText = user.displayName || "Player";
+            if (userPhotoDisplay) userPhotoDisplay.src = user.photoURL || "";
             await syncUserCloudData(user.uid);
         } else {
             currentUser = null;
-            loginBtn.style.display = 'block';
-            userProfile.style.display = 'none';
+            if (loginBtn) loginBtn.style.display = 'block';
+            if (userProfile) userProfile.style.display = 'none';
         }
     });
-    googleLoginBtn.addEventListener('click', handleGoogleLogin);
-    loginBtn.addEventListener('click', handleGoogleLogin);
-    document.getElementById('logout-btn').addEventListener('click', () => { auth.signOut(); location.reload(); });
+    if (googleLoginBtn) googleLoginBtn.addEventListener('click', handleGoogleLogin);
+    if (loginBtn) loginBtn.addEventListener('click', handleGoogleLogin);
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) logoutBtn.addEventListener('click', () => { auth.signOut(); location.reload(); });
 }
 
 async function handleGoogleLogin() {
@@ -132,7 +134,8 @@ async function syncUserCloudData(uid) {
 
 async function saveUserDataToCloud() {
     if (currentUser) {
-        await setDoc(doc(db, "users", currentUser.uid), { highScore, coins, lastPlayed: Date.now() }, { merge: true });
+        try { await setDoc(doc(db, "users", currentUser.uid), { highScore, coins, lastPlayed: Date.now() }, { merge: true }); }
+        catch (e) { console.error("Cloud save failed:", e); }
     }
 }
 
@@ -144,17 +147,25 @@ function init() {
     scene.fog = new THREE.Fog(0x050510, 20, 250);
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1500);
+    camera.position.set(0, 8, 12);
+    camera.lookAt(0, 0, 0);
+
     renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    document.getElementById('canvas-container').appendChild(renderer.domElement);
+    const container = document.getElementById('canvas-container');
+    if (container) container.appendChild(renderer.domElement);
 
     audioListener = new THREE.AudioListener();
     camera.add(audioListener);
     bgMusic = new THREE.Audio(audioListener);
-    new THREE.AudioLoader().load(MUSIC_URL, (b) => { bgMusic.setBuffer(b); bgMusic.setLoop(true); bgMusic.setVolume(0.5); });
+    new THREE.AudioLoader().load(MUSIC_URL, (b) => { 
+        bgMusic.setBuffer(b); 
+        bgMusic.setLoop(true); 
+        bgMusic.setVolume(0.5); 
+    });
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.4));
     dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -171,7 +182,7 @@ function init() {
     s2.rotation.y = Math.PI/2; ball.add(s1, s2);
     scene.add(ball);
 
-    bottomFloor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), MATS.bottom);
+    const bottomFloor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), MATS.bottom);
     bottomFloor.rotation.x = -Math.PI/2; bottomFloor.position.y = -100;
     scene.add(bottomFloor);
     const grid = new THREE.GridHelper(1000, 50, 0x4444ff, 0x222244);
@@ -180,9 +191,10 @@ function init() {
     window.addEventListener('keydown', (e) => { keys[e.code] = true; if (e.code === 'Space') handleSpacePress(); });
     window.addEventListener('keyup', (e) => keys[e.code] = false);
     window.addEventListener('resize', onWindowResize);
-    reviveButton.addEventListener('click', reviveGame);
-    startOverlay.addEventListener('click', (e) => { if (!e.target.closest('button')) handleSpacePress(); });
-    gameOverOverlay.addEventListener('click', (e) => { if (!e.target.closest('button')) handleSpacePress(); });
+    if (reviveButton) reviveButton.addEventListener('click', reviveGame);
+    if (startBtn) startBtn.addEventListener('click', handleSpacePress);
+    if (startOverlay) startOverlay.addEventListener('click', (e) => { if (!e.target.closest('button')) handleSpacePress(); });
+    if (gameOverOverlay) gameOverOverlay.addEventListener('click', (e) => { if (!e.target.closest('button')) handleSpacePress(); });
     if (soundToggle) soundToggle.addEventListener('click', toggleSound);
 
     animate();
@@ -191,18 +203,26 @@ function init() {
 function toggleSound() {
     isMuted = !isMuted;
     if (bgMusic) {
-        if (isMuted) { bgMusic.setVolume(0); soundToggle.innerText = "🔇 Sound Off"; }
-        else { bgMusic.setVolume(0.5); soundToggle.innerText = "🔊 Sound On"; if (state === 'PLAYING') bgMusic.play(); }
+        if (isMuted) { bgMusic.setVolume(0); if (soundToggle) soundToggle.innerText = "🔇 Sound Off"; }
+        else { bgMusic.setVolume(0.5); if (soundToggle) soundToggle.innerText = "🔊 Sound On"; if (state === 'PLAYING') bgMusic.play(); }
     }
 }
 
-function handleSpacePress() { if (state === 'START' || state === 'GAMEOVER') { if (!isMuted && bgMusic.buffer) bgMusic.play(); resetGame(); } }
+function handleSpacePress() { 
+    if (state === 'START' || state === 'GAMEOVER') { 
+        if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play(); 
+        resetGame(); 
+    } 
+}
 
 function resetGame() {
     state = 'PLAYING'; score = 0; scoreBonus = 0; isFlying = false; isTitan = false; isBoosting = false;
-    ball.scale.set(1, 1, 1); ball.position.set(0, BALL_RADIUS + 2, 0); ballVelocity.set(0, 0, 0);
+    titanTimer = 0; boostTimer = 0; flightTimer = 0;
+    ball.scale.set(1, 1, 1); ball.position.set(0, BALL_RADIUS + 2, 0); 
+    ballVelocity.set(0, 0, 0);
     clearWorld();
-    startOverlay.style.display = 'none'; gameOverOverlay.style.display = 'none';
+    if (startOverlay) startOverlay.style.display = 'none'; 
+    if (gameOverOverlay) gameOverOverlay.style.display = 'none';
     for(let z = 20; z > -150; z -= TILE_SIZE) spawnFloorRow(z);
 }
 
@@ -214,6 +234,7 @@ function clearWorld() {
 }
 
 function removeAndDispose(obj, arr) {
+    if (!obj) return;
     scene.remove(obj);
     if (arr) { const i = arr.indexOf(obj); if (i > -1) arr.splice(i, 1); }
 }
@@ -223,7 +244,7 @@ function reviveGame() {
         coins -= REVIVE_COST; localStorage.setItem('totalCoins', coins);
         state = 'PLAYING'; isFlying = false; isTitan = false; titanTimer = 3; isBoosting = false;
         ball.scale.set(1, 1, 1); ball.position.set(0, BALL_RADIUS + 10, ball.position.z);
-        gameOverOverlay.style.display = 'none';
+        if (gameOverOverlay) gameOverOverlay.style.display = 'none';
     }
 }
 
@@ -355,14 +376,15 @@ function updatePhysics() {
     if (isTitan) { titanTimer -= 1/60; if (titanTimer <= 0) { isTitan = false; ball.scale.set(1, 1, 1); } }
     if (isBoosting) { boostTimer -= 1/60; camera.fov = THREE.MathUtils.lerp(camera.fov, 110, 0.1); camera.updateProjectionMatrix(); if (boostTimer <= 0) isBoosting = false; }
     else { camera.fov = THREE.MathUtils.lerp(camera.fov, 75, 0.1); camera.updateProjectionMatrix(); }
+    
     let speed = FORWARD_SPEED + (score / 1000); if (isBoosting) speed += 1.5;
     ball.position.z -= speed;
     score = Math.max(0, Math.floor(Math.abs(ball.position.z) / SCORE_DIVIDER) + scoreBonus);
     if (score > highScore) highScore = score;
 
-    if (score !== lastDisplayedScore) { scoreValue.innerText = score; lastDisplayedScore = score; }
-    if (highScore !== lastDisplayedHighScore) { highScoreValue.innerText = highScore; lastDisplayedHighScore = highScore; }
-    if (coins !== lastDisplayedCoins) { coinValue.innerText = coins; lastDisplayedCoins = coins; }
+    if (score !== lastDisplayedScore && scoreValue) { scoreValue.innerText = score; lastDisplayedScore = score; }
+    if (highScore !== lastDisplayedHighScore && highScoreValue) { highScoreValue.innerText = highScore; lastDisplayedHighScore = highScore; }
+    if (coins !== lastDisplayedCoins && coinValue) { coinValue.innerText = coins; lastDisplayedCoins = coins; }
 
     let sm = 0; if (keys['ArrowLeft'] || keys['KeyA']) sm = -SIDE_SPEED; if (keys['ArrowRight'] || keys['KeyD']) sm = SIDE_SPEED;
     ball.position.x += sm; ball.rotation.x -= speed / BALL_RADIUS; ball.rotation.z -= sm / BALL_RADIUS;
@@ -390,7 +412,7 @@ function updatePhysics() {
     if (ball.position.y < -90) gameOver();
 
     obstacles.forEach(o => {
-        if (o.userData.boundingBox) {
+        if (o.userData && o.userData.boundingBox) {
             const t = Date.now() * (o.userData.speed || o.userData.bounceSpeed || 0.002) + o.userData.timeOffset;
             let needsBox = false;
             if (o.userData.isMoving) { o.position.x += o.userData.speed; if (Math.abs(o.position.x) > TRACK_WIDTH/2 - 1) o.userData.speed *= -1; needsBox = true; }
@@ -415,34 +437,44 @@ function updatePhysics() {
 
     if (!isFlying) {
         obstacles = obstacles.filter(o => {
-            if (!o.visible) return true;
+            if (!o.visible || !o.userData.boundingBox) return true;
             if (o.userData.boundingBox.intersectsSphere(ballSphere)) {
                 if (isTitan) { removeAndDispose(o); return false; } else { gameOver(); }
             }
             return true;
         });
     }
-    jumpPads.forEach(j => { if (j.userData.boundingBox.intersectsSphere(ballSphere)) ballVelocity.y = JUMP_IMPULSE * 1.5; });
-    superJumpPads.forEach(s => { if (s.userData.boundingBox.intersectsSphere(ballSphere)) { ballVelocity.y = SUPER_JUMP_IMPULSE; isFlying = true; flightTimer = FLIGHT_DURATION; } });
-    scorePads = scorePads.filter(p => { if (p.userData.boundingBox.intersectsSphere(ballSphere)) { scoreBonus -= p.userData.scorePenalty; removeAndDispose(p); return false; } return true; });
-    titanOrbs = titanOrbs.filter(t => { t.rotation.y += 0.05; if (t.userData.boundingBox.intersectsSphere(ballSphere)) { isTitan = true; titanTimer = 8; ball.scale.set(3, 3, 3); removeAndDispose(t); return false; } return true; });
-    boostPads.forEach(b => { if (b.userData.boundingBox.intersectsSphere(ballSphere)) { isBoosting = true; boostTimer = 3; } });
-    coinMeshes = coinMeshes.filter(c => { c.rotation.y += 0.05; if (ball.position.distanceTo(c.position) < ballSphere.radius + 0.6) { coins += 10; localStorage.setItem('totalCoins', coins); removeAndDispose(c); return false; } return true; });
+    jumpPads.forEach(j => { if (j.userData.boundingBox && j.userData.boundingBox.intersectsSphere(ballSphere)) ballVelocity.y = JUMP_IMPULSE * 1.5; });
+    superJumpPads.forEach(s => { if (s.userData.boundingBox && s.userData.boundingBox.intersectsSphere(ballSphere)) { ballVelocity.y = SUPER_JUMP_IMPULSE; isFlying = true; flightTimer = FLIGHT_DURATION; } });
+    scorePads = scorePads.filter(p => { if (p.userData.boundingBox && p.userData.boundingBox.intersectsSphere(ballSphere)) { scoreBonus -= p.userData.scorePenalty; removeAndDispose(p); return false; } return true; });
+    titanOrbs = titanOrbs.filter(t => { t.rotation.y += 0.05; if (t.userData.boundingBox && t.userData.boundingBox.intersectsSphere(ballSphere)) { isTitan = true; titanTimer = 8; ball.scale.set(3, 3, 3); removeAndDispose(t); return false; } return true; });
+    boostPads.forEach(b => { if (b.userData.boundingBox && b.userData.boundingBox.intersectsSphere(ballSphere)) { isBoosting = true; boostTimer = 3; } });
+    coinMeshes = coinMeshes.filter(c => { 
+        c.rotation.y += 0.05;
+        if (ball.position.distanceTo(c.position) < ballSphere.radius + 0.6) { 
+            coins += 10; 
+            localStorage.setItem('totalCoins', coins);
+            removeAndDispose(c); return false; 
+        } 
+        return true; 
+    });
 
     const cleanZ = ball.position.z + 50;
     [floorTiles, obstacles, jumpPads, superJumpPads, scorePads, coinMeshes, tunnels, titanOrbs, boostPads].forEach(arr => {
         for(let i=arr.length-1; i>=0; i--) if (arr[i].position.z > cleanZ) { removeAndDispose(arr[i], arr); }
     });
 
-    dirLight.position.z = ball.position.z + 30; dirLight.target.position.copy(ball.position); dirLight.target.updateMatrixWorld();
+    if (dirLight) { dirLight.position.z = ball.position.z + 30; dirLight.target.position.copy(ball.position); dirLight.target.updateMatrixWorld(); }
     camera.position.z = ball.position.z + 14; camera.position.x = ball.position.x * 0.5; camera.position.y = isFlying ? 50 : 8 + Math.max(0, -ball.position.y * 0.2);
     camera.lookAt(ball.position.x, ball.position.y, ball.position.z - 10);
 }
 
 function gameOver() {
-    state = 'GAMEOVER'; if (bgMusic.isPlaying) bgMusic.pause();
-    finalScore.innerText = score; localStorage.setItem('highScore', highScore); saveUserDataToCloud();
-    gameOverOverlay.style.display = 'flex'; reviveContainer.style.display = coins >= REVIVE_COST ? 'block' : 'none';
+    state = 'GAMEOVER'; if (bgMusic && bgMusic.isPlaying) bgMusic.pause();
+    if (finalScore) finalScore.innerText = score; 
+    localStorage.setItem('highScore', highScore); saveUserDataToCloud();
+    if (gameOverOverlay) gameOverOverlay.style.display = 'flex'; 
+    if (reviveContainer) reviveContainer.style.display = coins >= REVIVE_COST ? 'block' : 'none';
 }
 
 function animate() { requestAnimationFrame(animate); updatePhysics(); renderer.render(scene, camera); }
