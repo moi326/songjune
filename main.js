@@ -72,14 +72,15 @@ let isTitan = false, titanTimer = 0;
 let isBoosting = false, boostTimer = 0;
 let isMuted = false;
 let scene, camera, renderer, ball, dirLight, audioListener, bgMusic;
-let sfxCoin, sfxJump, sfxGameOver;
+let sfxCoin, sfxJump, sfxGameOver, sfxLand;
 let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [];
 let keys = {};
 let ballVelocity = new THREE.Vector3(0, 0, 0);
-const MUSIC_URL = 'https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a7348a.mp3';
+const MUSIC_URL = 'https://cdn.pixabay.com/audio/2022/03/15/audio_73663a778c.mp3'; // High-energy intense track
 const COIN_SFX_URL = 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg';
 const JUMP_SFX_URL = 'https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg';
 const OVER_SFX_URL = 'https://actions.google.com/sounds/v1/impacts/crash_metal.ogg';
+const LAND_SFX_URL = 'https://actions.google.com/sounds/v1/impacts/thump.ogg';
 
 // --- ELEMENTS ---
 const scoreValue = document.getElementById('score-value');
@@ -170,6 +171,7 @@ function init() {
     sfxCoin = new THREE.Audio(audioListener);
     sfxJump = new THREE.Audio(audioListener);
     sfxGameOver = new THREE.Audio(audioListener);
+    sfxLand = new THREE.Audio(audioListener);
 
     const audioLoader = new THREE.AudioLoader();
     audioLoader.load(MUSIC_URL, (b) => { 
@@ -180,6 +182,7 @@ function init() {
     audioLoader.load(COIN_SFX_URL, (b) => sfxCoin.setBuffer(b));
     audioLoader.load(JUMP_SFX_URL, (b) => sfxJump.setBuffer(b));
     audioLoader.load(OVER_SFX_URL, (b) => sfxGameOver.setBuffer(b));
+    audioLoader.load(LAND_SFX_URL, (b) => sfxLand.setBuffer(b));
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.4));
     dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -226,6 +229,7 @@ function toggleSound() {
     if (sfxCoin) sfxCoin.setVolume(sfxVol);
     if (sfxJump) sfxJump.setVolume(sfxVol);
     if (sfxGameOver) sfxGameOver.setVolume(sfxVol);
+    if (sfxLand) sfxLand.setVolume(sfxVol);
 }
 
 function handleSpacePress() { 
@@ -265,9 +269,21 @@ function removeAndDispose(obj, arr) {
 function reviveGame() {
     if (coins >= REVIVE_COST) {
         coins -= REVIVE_COST; localStorage.setItem('totalCoins', coins);
-        state = 'PLAYING'; isFlying = false; isTitan = false; titanTimer = 3; isBoosting = false;
-        ball.scale.set(1, 1, 1); ball.position.set(0, BALL_RADIUS + 10, ball.position.z);
+        state = 'PLAYING'; 
+        // Maintain existing speed-related states if they were active, 
+        // and give a temporary Titan (invincibility) for a safe restart.
+        isTitan = true; 
+        titanTimer = Math.max(titanTimer, 3); 
+        ball.scale.set(3, 3, 3); 
+        
+        // Reset vertical/side velocity to prevent glitchy falls/slides upon revival,
+        // but forward speed is naturally maintained via the score/z-position.
+        ballVelocity.set(0, 0, 0);
+        ball.position.y = BALL_RADIUS + 10; 
+        // ball.position.z is NOT reset, so score and base speed are maintained.
+
         if (gameOverOverlay) gameOverOverlay.style.display = 'none';
+        if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play();
     }
 }
 
@@ -448,8 +464,13 @@ function updatePhysics() {
     }
     floorTiles.forEach(tile => {
         if (Math.abs(ball.position.z - tile.position.z) < TILE_SIZE/2 + BALL_RADIUS && Math.abs(ball.position.x) < TRACK_WIDTH/2 + BALL_RADIUS) {
-            // More robust floor collision: if below floor surface and falling
+            // Robust floor collision: check if ball is below ground level (0)
             if (ball.position.y - BALL_RADIUS <= 0.1 && ballVelocity.y <= 0 && !isFlying) { 
+                // Play landing SFX if fall was significant
+                if (ballVelocity.y < -0.2 && sfxLand && !isMuted) {
+                    if (sfxLand.isPlaying) sfxLand.stop();
+                    sfxLand.play();
+                }
                 ball.position.y = BALL_RADIUS; 
                 ballVelocity.y = 0; 
             }
