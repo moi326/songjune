@@ -238,7 +238,7 @@ function init() {
     });
     synthSun = new THREE.Mesh(sunGeo, sunMat);
     synthSun.position.set(0, 50, -800);
-    scene.add(sunSun); // Note: Fix typo from synthSun to sunSun or vice versa
+    scene.add(synthSun); // Fix: changed from sunSun to synthSun
 
     // Retro Starfield
     const starGeo = new THREE.BufferGeometry();
