@@ -180,6 +180,7 @@ function showFloatingText(text, color) {
 
 // --- INITIALIZATION ---
 function init() {
+    console.log("Game initializing...");
     initAuth();
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x100020);
@@ -262,6 +263,7 @@ function init() {
     });
     window.addEventListener('keyup', (e) => keys[e.code] = false);
     window.addEventListener('resize', onWindowResize);
+    
     if (reviveButton) reviveButton.addEventListener('click', reviveGame);
     if (startBtn) startBtn.addEventListener('click', handleSpacePress);
     if (startOverlay) startOverlay.addEventListener('click', handleSpacePress);
@@ -270,11 +272,16 @@ function init() {
     });
     if (soundToggle) soundToggle.addEventListener('click', toggleSound);
 
-    // Initial click/touch to start for mobile and web safety
-    window.addEventListener('mousedown', () => { if (state === 'START') handleSpacePress(); }, { once: true });
-    window.addEventListener('touchstart', () => { if (state === 'START') handleSpacePress(); }, { once: true });
+    // Click anywhere to start
+    window.addEventListener('mousedown', () => { 
+        if (state === 'START') {
+            console.log("Starting via mousedown...");
+            handleSpacePress();
+        }
+    });
 
     animate();
+    console.log("Initialization complete. Ready to start.");
 }
 
 function toggleSound() {
@@ -294,6 +301,7 @@ function toggleSound() {
 
 function handleSpacePress() { 
     if (state === 'START' || state === 'GAMEOVER') { 
+        console.log("Starting/Resetting game...");
         if (THREE.AudioContext.getContext().state === 'suspended') {
             THREE.AudioContext.getContext().resume();
         }
