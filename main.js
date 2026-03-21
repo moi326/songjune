@@ -43,18 +43,18 @@ const GEOS = {
 };
 
 const MATS = {
-    tile: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8, emissive: 0x112233, emissiveIntensity: 0.8 }),
+    tile: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8 }),
     rim: new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.6 }),
     ball: new THREE.MeshStandardMaterial({ color: 0x00ffcc, roughness: 0.2, metalness: 0.5 }),
 
     stripe: new THREE.MeshBasicMaterial({ color: 0x000000 }),
     bottom: new THREE.MeshStandardMaterial({ color: 0x0a0a20, transparent: true, opacity: 0.4 }),
-    coin: new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1, emissive: 0xffd700, emissiveIntensity: 0.3 }),
-    jump: new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 0.5 }),
-    superJump: new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff00ff, emissiveIntensity: 1.0 }),
-    scorePad: new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.3 }),
-    titan: new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: true, emissive: 0x00ffff, emissiveIntensity: 1.0 }),
-    boost: new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.5 }),
+    coin: new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1 }),
+    jump: new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
+    superJump: new THREE.MeshStandardMaterial({ color: 0xff00ff }),
+    scorePad: new THREE.MeshStandardMaterial({ color: 0xff0000 }),
+    titan: new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: true }),
+    boost: new THREE.MeshStandardMaterial({ color: 0x00ffcc }),
     white: new THREE.MeshBasicMaterial({ color: 0xffffff }),
     wall: new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 0.8, roughness: 0.2 }),
     neon: new THREE.MeshBasicMaterial({ color: 0x00ffff })
@@ -72,7 +72,7 @@ let isFlying = false, flightTimer = 0;
 let isTitan = false, titanTimer = 0;
 let isBoosting = false, boostTimer = 0;
 let isMuted = true;
-let scene, camera, renderer, ball, dirLight, ballLight, ballGlow, audioListener, bgMusic;
+let scene, camera, renderer, ball, dirLight, audioListener, bgMusic;
 let sfxCoin, sfxJump, sfxGameOver, sfxLand;
 let starfield, bottomFloor, grid;
 let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [], floatingTexts = [];
@@ -224,19 +224,6 @@ function init() {
     dirLight.shadow.camera.top = 30; dirLight.shadow.camera.bottom = -30;
     dirLight.shadow.mapSize.width = 1024; dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
-
-    // Ball Headlight
-    ballLight = new THREE.SpotLight(0x00ffff, 500);
-    ballLight.angle = Math.PI / 4;
-    ballLight.penumbra = 0.3;
-    ballLight.decay = 1;
-    ballLight.distance = 120;
-    scene.add(ballLight);
-    scene.add(ballLight.target);
-
-    // Ball Immediate Glow
-    ballGlow = new THREE.PointLight(0xffffff, 250, 25);
-    scene.add(ballGlow);
 
     ball = new THREE.Mesh(GEOS.ball, MATS.ball);
     ball.castShadow = true;
@@ -510,14 +497,12 @@ function updatePhysics() {
 
     if (isFlying) {
         flightTimer -= 1/60; ball.position.y = THREE.MathUtils.lerp(ball.position.y, 40, 0.05);
-        const h = (Date.now() % 1000) / 1000; ball.material.emissive.setHSL(h, 1, 0.5);
         if (Math.floor(Date.now() / 50) % 2 === 0) {
-            const d = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(h, 1, 0.5) }));
+            const d = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), MATS.white);
             d.position.copy(ball.position); scene.add(d); flightTrail.push({ mesh: d, life: 1.0 });
         }
         if (flightTimer <= 0) { 
             isFlying = false; 
-            ball.material.emissive.setHex(0x000000); 
             ballVelocity.y = 0; // Reset velocity when flight ends
         }
     } else { 
@@ -627,14 +612,6 @@ function updatePhysics() {
 
     if (dirLight) { dirLight.position.z = ball.position.z + 30; dirLight.target.position.copy(ball.position); dirLight.target.updateMatrixWorld(); }
     
-    // Ball Light follow
-    if (ballLight) {
-        ballLight.position.set(ball.position.x, ball.position.y + 2, ball.position.z);
-        ballLight.target.position.set(ball.position.x, 0, ball.position.z - 20);
-        ballLight.target.updateMatrixWorld();
-    }
-    if (ballGlow) ballGlow.position.copy(ball.position);
-
     // Background follow
     if (starfield) starfield.position.z = ball.position.z;
     if (bottomFloor) bottomFloor.position.z = ball.position.z;

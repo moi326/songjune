@@ -6,11 +6,11 @@ A high-performance, immersive 3D rolling ball game built with Three.js. This ver
 
 ## Design & Aesthetics
 
-- **Visual Style:** High-contrast neon aesthetics with a deep space theme.
+- **Visual Style:** High-contrast aesthetics with a deep space theme.
 - **Lighting:** 
-    - Moderate intensity ambient (0.6) and directional (1.5) lighting for a balanced environment.
-    - Dynamic SpotLight "headlight" (500 intensity) and PointLight "glow" (250 intensity) attached to the player ball.
-    - Subtle emissive materials for tiles, coins, and power-ups.
+    - Ambient (0.6) and directional (1.5) lighting.
+    - No direct light sources attached to the player ball.
+    - All game objects use standard materials without self-illumination (emissive effects removed).
 - **Background:**
     - Deep space scene with a 2000-star starfield.
     - Fog effect (0x0a0a25) for depth and performance.
@@ -21,7 +21,7 @@ A high-performance, immersive 3D rolling ball game built with Three.js. This ver
 - **Animations:**
     - High-performance sprite-based floating text.
     - Smooth camera movement following the ball.
-    - Material pulsing and particle trails.
+    - Particle trails (white) during flight mode.
 
 ## Features
 
@@ -29,7 +29,7 @@ A high-performance, immersive 3D rolling ball game built with Three.js. This ver
 - **Obstacles:** Variety of moving and static obstacles (boxes, crushers, windmills, bouncers, lasers, pendulums, gates).
 - **Power-ups:**
     - **Jump Pad:** Standard jump.
-    - **Super Jump Pad:** Initiates flight mode with a rainbow trail.
+    - **Super Jump Pad:** Initiates flight mode with a white trail.
     - **Titan Orb:** Increases ball size and grants invincibility.
     - **Boost Pad:** Temporary speed increase and FOV expansion.
 - **Currency & Scoring:**
@@ -50,7 +50,8 @@ A high-performance, immersive 3D rolling ball game built with Three.js. This ver
 
 ## Recent Changes (March 21, 2026)
 
-- **Lighting & Sound Adjustment:** 
-    - Reduced lighting intensity (Ambient, Directional, and Ball lights).
-    - Reduced emissive intensity for all materials.
-    - Set sound/voice to be muted by default.
+- **Lighting & Effect Removal:** 
+    - Removed ball headlight and glow effects.
+    - Removed emissive (glowing) properties from all game object materials (tiles, coins, obstacles, power-ups).
+    - Preserved original object colors.
+    - Changed flight trail color to plain white.
