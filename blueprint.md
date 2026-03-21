@@ -2,39 +2,57 @@
 
 ## Overview
 
-A high-performance, immersive 3D rolling ball game built with Three.js. This version features "Top-to-Bottom" optimizations ensuring 60 FPS on modern web browsers by leveraging asset reuse, texture caching, and dynamic shadow management.
+A high-performance, immersive 3D rolling ball game built with Three.js. This version features "Top-to-Bottom" optimizations ensuring 60 FPS on modern web browsers while maintaining high visual fidelity and cloud data synchronization with Firebase.
 
-## Game Design & Features
+## Design & Aesthetics
 
-*   **3D Environment:** Stylized world with a perspective camera following the ball. Features high-detail neon tunnels and a grid-covered bottom floor.
-*   **Core Mechanics:**
-    - **Movement:** Automatic forward momentum with increasing speed. Left/Right control with gravity and jump pad physics.
-    - **Items:** Titan Orb (Invincibility/Size), Boost Pad (FOV Warp), Super Jump (Rainbow Trail Flight).
-    - **Obstacles:** Animated boxes, crushers, windmills, bouncers, lasers, pendulums, and closing gates.
-*   **Authentication & Cloud:** Firebase Auth (Google Login) and Firestore real-time sync for high scores and coins.
+- **Visual Style:** High-contrast neon aesthetics with a deep space theme.
+- **Lighting:** 
+    - High-intensity ambient (1.0) and directional (2.5) lighting for a vibrant environment.
+    - Dynamic SpotLight "headlight" and PointLight "glow" attached to the player ball.
+    - Intense emissive materials for tiles, coins, and power-ups.
+- **Background:**
+    - Deep space scene with a 2000-star starfield.
+    - Fog effect (0x0a0a25) for depth and performance.
+    - Pulsing neon grid on the floor.
+- **Voice Feedback:**
+    - Real-time voice feedback using `SpeechSynthesisUtterance`.
+    - Natural voice parameters (rate 1.0, pitch 1.0).
+- **Animations:**
+    - High-performance sprite-based floating text.
+    - Smooth camera movement following the ball.
+    - Material pulsing and particle trails.
 
-## Optimization Details (From Start to Finish)
+## Features
 
-### 1. Asset Management (Memory & CPU)
-- **Geometry & Material Reuse:** All tiles, coins, and basic obstacles share global `Geometry` and `Material` instances to prevent heap memory growth.
-- **Texture Caching:** Sprite textures for score pads are pre-rendered and cached to avoid redundant canvas draw calls.
+- **Core Gameplay:** Endless runner style with increasing speed based on score.
+- **Obstacles:** Variety of moving and static obstacles (boxes, crushers, windmills, bouncers, lasers, pendulums, gates).
+- **Power-ups:**
+    - **Jump Pad:** Standard jump.
+    - **Super Jump Pad:** Initiates flight mode with a rainbow trail.
+    - **Titan Orb:** Increases ball size and grants invincibility.
+    - **Boost Pad:** Temporary speed increase and FOV expansion.
+- **Currency & Scoring:**
+    - Coins collected during gameplay (stored in LocalStorage and Firestore).
+    - Score calculated based on distance and bonuses.
+    - **Revive System:** Costs 300 coins to continue after a crash.
+- **Firebase Integration:**
+    - Google Authentication for user identification.
+    - Firestore synchronization for high scores and coin totals.
+    - Automatic data merging between LocalStorage and Cloud.
 
-### 2. Rendering & Lighting
-- **Dynamic Shadow Camera:** The shadow frustum is tightly constrained and follows the player's position, providing high-quality shadows only where needed.
-- **Adaptive Pixel Ratio:** Limited to 2.0 to maintain performance on Retina/High-DPI displays without sacrificing visual clarity.
-- **WebGL Power Preference:** Configured for "high-performance" GPU usage.
+## File Structure
 
-### 3. Logic & Physics
-- **Minimal DOM Interaction:** UI updates (Score, Coins) are triggered only when values change, preventing layout thrashing.
-- **Optimized Collision:** Uses pre-calculated `Box3` and `Sphere` checks. Animated obstacles update their bounding volumes only when necessary.
-- **Batched Cloud Sync:** Database writes are performed at key game state changes (GameOver/Revive) rather than every item collection.
+- `index.html`: UI structure, including game overlays and auth status.
+- `style.css`: Modern CSS using variables and OKLCH color space.
+- `main.js`: Core game logic, Three.js implementation, and Firebase integration.
+- `firebase-config.js`: Firebase SDK configuration.
 
-## Project Structure
+## Recent Changes (March 21, 2026)
 
-*   `index.html`: Optimized HUD and 3D container.
-*   `style.css`: Modern UI with GPU-accelerated effects.
-*   `main.js`: Refactored core logic with full optimization patterns.
-*   `firebase-config.js`: Cloud configuration.
-
-## Current Status
-- **Final Refinement Complete:** The codebase has been fully audited and optimized from start to finish.
+- **Aesthetic Restoration:** 
+    - Reverted lighting and background to original "intense" levels.
+    - Restored ball headlight and immediate glow effects.
+    - Restored high emissive intensities for all game objects.
+    - Reverted voice feedback to natural rate and pitch.
+    - Set sound to be enabled by default.
