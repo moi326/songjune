@@ -256,23 +256,22 @@ function init() {
     grid = new THREE.GridHelper(2000, 80, 0xff00ff, 0x00ffff);
     grid.position.y = -99.9; scene.add(grid);
 
-    window.addEventListener('keydown', (e) => { keys[e.code] = true; if (e.code === 'Space') handleSpacePress(); });
+    window.addEventListener('keydown', (e) => { 
+        keys[e.code] = true; 
+        if (state === 'START' || state === 'GAMEOVER') handleSpacePress(); 
+    });
     window.addEventListener('keyup', (e) => keys[e.code] = false);
     window.addEventListener('resize', onWindowResize);
     if (reviveButton) reviveButton.addEventListener('click', reviveGame);
     if (startBtn) startBtn.addEventListener('click', handleSpacePress);
-    if (startOverlay) startOverlay.addEventListener('click', (e) => { if (!e.target.closest('button')) handleSpacePress(); });
+    if (startOverlay) startOverlay.addEventListener('click', handleSpacePress);
     if (soundToggle) soundToggle.addEventListener('click', toggleSound);
 
+    // Initial click/touch to start for mobile and web safety
+    window.addEventListener('mousedown', () => { if (state === 'START') handleSpacePress(); }, { once: true });
+    window.addEventListener('touchstart', () => { if (state === 'START') handleSpacePress(); }, { once: true });
+
     animate();
-    
-    // Auto-start for the user after 1.5 seconds
-    setTimeout(() => {
-        if (state === 'START') {
-            console.log("Auto-starting game...");
-            handleSpacePress();
-        }
-    }, 1500);
 }
 
 function toggleSound() {
