@@ -43,21 +43,21 @@ const GEOS = {
 };
 
 const MATS = {
-    tile: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2, metalness: 0.5 }),
-    rim: new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.6 }),
-    ball: new THREE.MeshStandardMaterial({ color: 0x00ffcc, roughness: 0.2, metalness: 0.5 }),
+    tile: new THREE.MeshStandardMaterial({ color: 0x1a0033, roughness: 0.1, metalness: 0.8 }),
+    rim: new THREE.MeshBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 0.6 }),
+    ball: new THREE.MeshStandardMaterial({ color: 0x00ffff, roughness: 0.2, metalness: 0.5 }),
 
     stripe: new THREE.MeshBasicMaterial({ color: 0x000000 }),
-    bottom: new THREE.MeshStandardMaterial({ color: 0x0a0a20, transparent: true, opacity: 0.4 }),
-    coin: new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1, emissive: 0xffd700, emissiveIntensity: 0.2 }),
-    jump: new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.3 }),
-    superJump: new THREE.MeshStandardMaterial({ color: 0xff55ff, emissive: 0xff55ff, emissiveIntensity: 0.3 }),
-    scorePad: new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff4444, emissiveIntensity: 0.3 }),
-    titan: new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: true, emissive: 0x00ffff, emissiveIntensity: 0.5 }),
-    boost: new THREE.MeshStandardMaterial({ color: 0x33ffff, emissive: 0x33ffff, emissiveIntensity: 0.3 }),
+    bottom: new THREE.MeshStandardMaterial({ color: 0x220044, transparent: true, opacity: 0.4 }),
+    coin: new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1, emissive: 0xffaa00, emissiveIntensity: 0.3 }),
+    jump: new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.4 }),
+    superJump: new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff00ff, emissiveIntensity: 0.4 }),
+    scorePad: new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff4444, emissiveIntensity: 0.4 }),
+    titan: new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: true, emissive: 0x00ffff, emissiveIntensity: 0.6 }),
+    boost: new THREE.MeshStandardMaterial({ color: 0x33ffff, emissive: 0x33ffff, emissiveIntensity: 0.4 }),
     white: new THREE.MeshBasicMaterial({ color: 0xffffff }),
-    wall: new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.8, roughness: 0.2 }),
-    neon: new THREE.MeshBasicMaterial({ color: 0x00ffff })
+    wall: new THREE.MeshStandardMaterial({ color: 0x110022, metalness: 0.8, roughness: 0.2 }),
+    neon: new THREE.MeshBasicMaterial({ color: 0xff00ff })
 };
 
 const scoreTextureCache = {};
@@ -74,11 +74,11 @@ let isBoosting = false, boostTimer = 0;
 let isMuted = true;
 let scene, camera, renderer, ball, dirLight, audioListener, bgMusic;
 let sfxCoin, sfxJump, sfxGameOver, sfxLand;
-let starfield, bottomFloor, grid, planets = [], shootingStars = [];
+let starfield, bottomFloor, grid, synthSun;
 let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [], floatingTexts = [];
 let keys = {};
 let ballVelocity = new THREE.Vector3(0, 0, 0);
-const MUSIC_URL = 'https://cdn.pixabay.com/audio/2022/03/15/audio_73663a778c.mp3'; // High-energy intense track
+const MUSIC_URL = 'https://cdn.pixabay.com/audio/2022/03/15/audio_73663a778c.mp3'; 
 const COIN_SFX_URL = 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg';
 const JUMP_SFX_URL = 'https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg';
 const OVER_SFX_URL = 'https://actions.google.com/sounds/v1/impacts/crash_metal.ogg';
@@ -182,10 +182,10 @@ function showFloatingText(text, color) {
 function init() {
     initAuth();
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x020205);
-    scene.fog = new THREE.Fog(0x020205, 50, 500);
+    scene.background = new THREE.Color(0x100020);
+    scene.fog = new THREE.Fog(0x100020, 20, 450);
 
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
     camera.position.set(0, 8, 12);
     camera.lookAt(0, 0, 0);
 
@@ -216,13 +216,10 @@ function init() {
     audioLoader.load(OVER_SFX_URL, (b) => sfxGameOver.setBuffer(b));
     audioLoader.load(LAND_SFX_URL, (b) => sfxLand.setBuffer(b));
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-    dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    dirLight = new THREE.DirectionalLight(0xff00ff, 1.2);
     dirLight.position.set(30, 50, 30);
     dirLight.castShadow = true;
-    dirLight.shadow.camera.left = -30; dirLight.shadow.camera.right = 30;
-    dirLight.shadow.camera.top = 30; dirLight.shadow.camera.bottom = -30;
-    dirLight.shadow.mapSize.width = 1024; dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
 
     ball = new THREE.Mesh(GEOS.ball, MATS.ball);
@@ -231,45 +228,32 @@ function init() {
     s2.rotation.y = Math.PI/2; ball.add(s1, s2);
     scene.add(ball);
 
-    // Enhanced Starfield - Layered
-    function createStarLayer(count, size, color, range) {
-        const geo = new THREE.BufferGeometry();
-        const coords = [];
-        for(let i=0; i<count; i++) {
-            coords.push((Math.random()-0.5)*range, (Math.random()-0.5)*range, (Math.random()-0.5)*range);
-        }
-        geo.setAttribute('position', new THREE.Float32BufferAttribute(coords, 3));
-        return new THREE.Points(geo, new THREE.PointsMaterial({ color: color, size: size, transparent: true, opacity: 0.8 }));
-    }
+    // Synthwave Sun
+    const sunGeo = new THREE.CircleGeometry(100, 64);
+    const sunMat = new THREE.MeshBasicMaterial({
+        color: 0xffaa00,
+        transparent: true,
+        opacity: 0.9,
+        side: THREE.DoubleSide
+    });
+    synthSun = new THREE.Mesh(sunGeo, sunMat);
+    synthSun.position.set(0, 50, -800);
+    scene.add(sunSun); // Note: Fix typo from synthSun to sunSun or vice versa
 
-    starfield = new THREE.Group();
-    starfield.add(createStarLayer(2000, 0.5, 0xffffff, 2000));
-    starfield.add(createStarLayer(800, 1.2, 0x00ffff, 1500));
-    starfield.add(createStarLayer(500, 1.5, 0xff00ff, 1200));
+    // Retro Starfield
+    const starGeo = new THREE.BufferGeometry();
+    const starCoords = [];
+    for(let i=0; i<1500; i++) {
+        starCoords.push((Math.random()-0.5)*1500, (Math.random()*500), (Math.random()-0.5)*1500);
+    }
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
+    starfield = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xff00ff, size: 1.0, transparent: true, opacity: 0.6 }));
     scene.add(starfield);
 
-    // Distant Planets
-    const planetColors = [0x3366ff, 0x6633ff, 0xff6633, 0x33ff66];
-    for(let i=0; i<5; i++) {
-        const pGeo = new THREE.SphereGeometry(20 + Math.random()*30, 16, 16);
-        const pMat = new THREE.MeshStandardMaterial({ color: planetColors[i%4], roughness: 0.8, metalness: 0.2 });
-        const p = new THREE.Mesh(pGeo, pMat);
-        p.position.set((Math.random()-0.5)*800, (Math.random()-0.5)*400, -(Math.random()*1500 + 500));
-        scene.add(p);
-        planets.push({ mesh: p, rotSpeed: Math.random()*0.01 });
-    }
-
-    // Distant Nebula Glow
-    const nebulaGeo = new THREE.SphereGeometry(1500, 32, 32);
-    const nebulaMat = new THREE.MeshBasicMaterial({ color: 0x08001a, side: THREE.BackSide, transparent: true, opacity: 0.2 });
-    const nebula = new THREE.Mesh(nebulaGeo, nebulaMat);
-    scene.add(nebula);
-    nebula.userData = { isNebula: true };
-
-    bottomFloor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), MATS.bottom);
+    bottomFloor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), MATS.bottom);
     bottomFloor.rotation.x = -Math.PI/2; bottomFloor.position.y = -100;
     scene.add(bottomFloor);
-    grid = new THREE.GridHelper(1000, 40, 0x00ffff, 0xff00ff);
+    grid = new THREE.GridHelper(2000, 80, 0xff00ff, 0x00ffff);
     grid.position.y = -99.9; scene.add(grid);
 
     window.addEventListener('keydown', (e) => { keys[e.code] = true; if (e.code === 'Space') handleSpacePress(); });
@@ -281,17 +265,6 @@ function init() {
     if (soundToggle) soundToggle.addEventListener('click', toggleSound);
 
     animate();
-}
-
-function spawnShootingStar() {
-    const geo = new THREE.BufferGeometry();
-    const pos = new THREE.Vector3((Math.random()-0.5)*600, (Math.random()*200+100), ball.position.z - 800);
-    const points = [pos.x, pos.y, pos.z, pos.x - 10, pos.y - 10, pos.z + 50];
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
-    const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1 });
-    const line = new THREE.Line(geo, mat);
-    scene.add(line);
-    shootingStars.push({ mesh: line, life: 1.0 });
 }
 
 function toggleSound() {
@@ -347,11 +320,8 @@ function reviveGame() {
     if (coins >= REVIVE_COST) {
         coins -= REVIVE_COST; localStorage.setItem('totalCoins', coins);
         state = 'PLAYING'; 
-        isTitan = true; 
-        titanTimer = Math.max(titanTimer, 3); 
-        ball.scale.set(3, 3, 3); 
-        ballVelocity.set(0, 0, 0);
-        ball.position.y = BALL_RADIUS + 10; 
+        isTitan = true; titanTimer = Math.max(titanTimer, 3); ball.scale.set(3, 3, 3); 
+        ballVelocity.set(0, 0, 0); ball.position.y = BALL_RADIUS + 10; 
         if (gameOverOverlay) gameOverOverlay.style.display = 'none';
         if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play();
     }
@@ -372,9 +342,7 @@ function spawnFloorRow(z) {
     const tile = new THREE.Mesh(GEOS.tile, MATS.tile);
     tile.position.set(0, -0.25, z); tile.receiveShadow = true;
     const rim = new THREE.Mesh(GEOS.rim, MATS.rim);
-    rim.rotation.x = -Math.PI / 2;
-    rim.position.set(0, 0.01, 0); 
-    tile.add(rim);
+    rim.rotation.x = -Math.PI / 2; rim.position.set(0, 0.01, 0); tile.add(rim);
     scene.add(tile); floorTiles.push(tile);
     if (Math.abs(z) > 100 && Math.random() > 0.96) spawnScorePad(z);
     if (z < -100 && Math.abs(z % TUNNEL_SPAWN_INTERVAL) < TILE_SIZE) spawnTunnel(z);
@@ -400,7 +368,7 @@ function spawnObstacle(z) {
     const type = types[Math.floor(Math.random() * types.length)];
     let mesh;
     if (type === 'box') {
-        const w = 2 + Math.random()*2; mesh = new THREE.Mesh(new THREE.BoxGeometry(w, 1.5, 1.5), new THREE.MeshStandardMaterial({ color: 0xff3366 }));
+        const w = 2 + Math.random()*2; mesh = new THREE.Mesh(new THREE.BoxGeometry(w, 1.5, 1.5), new THREE.MeshStandardMaterial({ color: 0xff00ff }));
         mesh.position.set((Math.random()-0.5)*(TRACK_WIDTH-w), 0.75, z);
     } else if (type === 'movingBox') {
         mesh = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 1.5), new THREE.MeshStandardMaterial({ color: 0x00ffff }));
@@ -456,7 +424,7 @@ function spawnScorePad(z) {
     p.position.set((Math.random()-0.5)*(TRACK_WIDTH-3), 0.05, z); p.userData = { scorePenalty: v };
     if (!scoreTextureCache[v]) {
         const c = document.createElement('canvas'); c.width = 64; c.height = 64;
-        const ctx = c.getContext('2d'); ctx.fillStyle = 'red'; ctx.font = 'bold 40px Arial'; ctx.textAlign = 'center'; ctx.fillText("-" + v, 32, 45);
+        const ctx = c.getContext('2d'); ctx.fillStyle = 'white'; ctx.font = 'bold 40px Arial'; ctx.textAlign = 'center'; ctx.fillText("-" + v, 32, 45);
         scoreTextureCache[v] = new THREE.CanvasTexture(c);
     }
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: scoreTextureCache[v] })); s.position.y = 2; s.scale.set(2, 2, 1); p.add(s);
@@ -556,7 +524,6 @@ function updatePhysics() {
     if (Math.abs(spawnZ % 10) < speed) spawnCoin(spawnZ);
     if (Math.abs(spawnZ % 300) < speed) spawnTitanOrb(spawnZ);
     if (Math.abs(spawnZ % 100) < speed) spawnBoostPad(spawnZ);
-    if (Math.random() > 0.99) spawnShootingStar();
 
     if (!isFlying) {
         obstacles = obstacles.filter(o => {
@@ -571,7 +538,7 @@ function updatePhysics() {
         if (j.userData.boundingBox && !j.userData.hasTriggered && j.userData.boundingBox.intersectsSphere(ballSphere)) {
             j.userData.hasTriggered = true; ballVelocity.y = JUMP_IMPULSE * 1.5; 
             if (sfxJump && !isMuted) { if (sfxJump.isPlaying) sfxJump.stop(); sfxJump.play(); }
-            speak("점프으!"); showFloatingText("점프으!", 0x00ff00);
+            speak("점프으!"); showFloatingText("점프으!", 0x00ff88);
         }
     });
     superJumpPads.forEach(s => { 
@@ -604,12 +571,7 @@ function updatePhysics() {
     if (starfield) starfield.position.z = ball.position.z;
     if (bottomFloor) bottomFloor.position.z = ball.position.z;
     if (grid) grid.position.z = ball.position.z;
-    planets.forEach(p => { p.mesh.rotation.y += p.rotSpeed; p.mesh.position.z = ball.position.z - 1000; });
-    shootingStars.forEach((s, i) => {
-        s.life -= 0.02; s.mesh.position.z += 10; s.mesh.material.opacity = s.life;
-        if (s.life <= 0) { scene.remove(s.mesh); shootingStars.splice(i, 1); }
-    });
-    scene.children.forEach(child => { if (child.userData && child.userData.isNebula) child.position.z = ball.position.z; });
+    if (synthSun) synthSun.position.z = ball.position.z - 800;
 
     camera.position.z = ball.position.z + 14; camera.position.x = ball.position.x * 0.5; camera.position.y = isFlying ? 50 : 8 + Math.max(0, -ball.position.y * 0.2);
     camera.lookAt(ball.position.x, ball.position.y, ball.position.z - 10);
@@ -621,7 +583,6 @@ function gameOver() {
     if (finalScore) finalScore.innerText = score; 
     localStorage.setItem('highScore', highScore); saveUserDataToCloud();
     if (gameOverOverlay) gameOverOverlay.style.display = 'flex'; 
-    if (reviveContainer) reviveContainer.style.display = coins >= REVIVE_COST ? 'block' : 'none';
 }
 
 function animate() { 
