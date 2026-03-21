@@ -43,8 +43,8 @@ const GEOS = {
 };
 
 const MATS = {
-    tile: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8 }),
-    rim: new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.4 }),
+    tile: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8, emissive: 0x112233, emissiveIntensity: 0.5 }),
+    rim: new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.6 }),
     ball: new THREE.MeshStandardMaterial({ color: 0x00ffcc, roughness: 0.2, metalness: 0.5 }),
     stripe: new THREE.MeshBasicMaterial({ color: 0x000000 }),
     bottom: new THREE.MeshStandardMaterial({ color: 0x0a0a20, transparent: true, opacity: 0.4 }),
@@ -71,7 +71,7 @@ let isFlying = false, flightTimer = 0;
 let isTitan = false, titanTimer = 0;
 let isBoosting = false, boostTimer = 0;
 let isMuted = false;
-let scene, camera, renderer, ball, dirLight, audioListener, bgMusic;
+let scene, camera, renderer, ball, dirLight, ballLight, audioListener, bgMusic;
 let sfxCoin, sfxJump, sfxGameOver, sfxLand;
 let starfield, bottomFloor, grid;
 let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [], floatingTexts = [];
@@ -152,8 +152,8 @@ function speak(text) {
     if (isMuted) return;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ko-KR';
-    utterance.rate = 2.2; // Faster
-    utterance.pitch = 2.0; // High pitch for Jam-min voice
+    utterance.rate = 1.1; // Calmer
+    utterance.pitch = 0.8; // Deeper, more sophisticated
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
 }
@@ -223,6 +223,15 @@ function init() {
     dirLight.shadow.camera.top = 30; dirLight.shadow.camera.bottom = -30;
     dirLight.shadow.mapSize.width = 1024; dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
+
+    // Ball Headlight
+    ballLight = new THREE.SpotLight(0x00ffff, 100);
+    ballLight.angle = Math.PI / 6;
+    ballLight.penumbra = 0.5;
+    ballLight.decay = 1;
+    ballLight.distance = 100;
+    scene.add(ballLight);
+    scene.add(ballLight.target);
 
     ball = new THREE.Mesh(GEOS.ball, MATS.ball);
     ball.castShadow = true;
@@ -613,6 +622,13 @@ function updatePhysics() {
 
     if (dirLight) { dirLight.position.z = ball.position.z + 30; dirLight.target.position.copy(ball.position); dirLight.target.updateMatrixWorld(); }
     
+    // Ball Light follow
+    if (ballLight) {
+        ballLight.position.set(ball.position.x, ball.position.y + 2, ball.position.z);
+        ballLight.target.position.set(ball.position.x, 0, ball.position.z - 20);
+        ballLight.target.updateMatrixWorld();
+    }
+
     // Background follow
     if (starfield) starfield.position.z = ball.position.z;
     if (bottomFloor) bottomFloor.position.z = ball.position.z;
