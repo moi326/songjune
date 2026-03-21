@@ -238,7 +238,7 @@ function init() {
     });
     synthSun = new THREE.Mesh(sunGeo, sunMat);
     synthSun.position.set(0, 50, -800);
-    scene.add(synthSun); // Fix: changed from sunSun to synthSun
+    scene.add(synthSun);
 
     // Retro Starfield
     const starGeo = new THREE.BufferGeometry();
@@ -265,6 +265,9 @@ function init() {
     if (reviveButton) reviveButton.addEventListener('click', reviveGame);
     if (startBtn) startBtn.addEventListener('click', handleSpacePress);
     if (startOverlay) startOverlay.addEventListener('click', handleSpacePress);
+    if (gameOverOverlay) gameOverOverlay.addEventListener('click', (e) => {
+        if (!e.target.closest('button')) handleSpacePress();
+    });
     if (soundToggle) soundToggle.addEventListener('click', toggleSound);
 
     // Initial click/touch to start for mobile and web safety
@@ -627,7 +630,6 @@ function reviveGame() {
         ball.position.y = BALL_RADIUS + 10; 
         if (gameOverOverlay) gameOverOverlay.style.display = 'none';
         if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play();
-        speak("부활 완료! 다시 달립니다!");
     }
 }
 
