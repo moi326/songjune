@@ -180,7 +180,6 @@ function showFloatingText(text, color) {
 
 // --- INITIALIZATION ---
 function init() {
-    console.log("Game initializing...");
     initAuth();
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x100020);
@@ -272,16 +271,11 @@ function init() {
     });
     if (soundToggle) soundToggle.addEventListener('click', toggleSound);
 
-    // Click anywhere to start
-    window.addEventListener('mousedown', () => { 
-        if (state === 'START') {
-            console.log("Starting via mousedown...");
-            handleSpacePress();
-        }
-    });
+    // Initial interaction to start
+    window.addEventListener('mousedown', () => { if (state === 'START') handleSpacePress(); }, { once: true });
+    window.addEventListener('touchstart', () => { if (state === 'START') handleSpacePress(); }, { once: true });
 
     animate();
-    console.log("Initialization complete. Ready to start.");
 }
 
 function toggleSound() {
@@ -301,7 +295,6 @@ function toggleSound() {
 
 function handleSpacePress() { 
     if (state === 'START' || state === 'GAMEOVER') { 
-        console.log("Starting/Resetting game...");
         if (THREE.AudioContext.getContext().state === 'suspended') {
             THREE.AudioContext.getContext().resume();
         }
@@ -338,7 +331,7 @@ function reviveGame() {
     if (coins >= REVIVE_COST) {
         coins -= REVIVE_COST; localStorage.setItem('totalCoins', coins);
         state = 'PLAYING'; 
-        isTitan = true; titanTimer = Math.max(titanTimer, 3); ball.scale.set(3, 3, 3); 
+        isTitan = true; titanTimer = 3; ball.scale.set(3, 3, 3); 
         ballVelocity.set(0, 0, 0); ball.position.y = BALL_RADIUS + 10; 
         if (gameOverOverlay) gameOverOverlay.style.display = 'none';
         if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play();
@@ -407,25 +400,11 @@ function spawnObstacle(z) {
         mesh = new THREE.Group(); 
         const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 10), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff00ff, emissiveIntensity: 0.5 })); 
         rod.position.y = -5;
-        
-        // Mini Sun for pendulum
-        const sunMat = new THREE.MeshStandardMaterial({ 
-            color: 0xffaa00, 
-            emissive: 0xff5500, 
-            emissiveIntensity: 2.0,
-            roughness: 0,
-            metalness: 0
-        });
+        const sunMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xff5500, emissiveIntensity: 2.0, roughness: 0, metalness: 0 });
         const pball = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), sunMat); 
         pball.position.y = -10;
-        
-        // Add a small glow ring around the mini sun
-        const ring = new THREE.Mesh(
-            new THREE.TorusGeometry(2.2, 0.05, 16, 100),
-            new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.5 })
-        );
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.05, 16, 100), new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.5 }));
         ring.position.y = -10;
-        
         mesh.add(rod, pball, ring); 
         mesh.position.set(0, 12, z); 
         mesh.userData = { isPendulum: true, timeOffset: Math.random()*Math.PI*2, speed: 0.002, angle: Math.PI/3 };
