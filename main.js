@@ -152,7 +152,8 @@ function speak(text) {
     if (isMuted) return;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ko-KR';
-    utterance.rate = 1.8; 
+    utterance.rate = 2.2; // Faster
+    utterance.pitch = 2.0; // High pitch for Jam-min voice
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
 }
@@ -410,7 +411,11 @@ function spawnObstacle(z) {
 function spawnJumpPad(z, force=false) {
     const p = new THREE.Mesh(GEOS.pad, MATS.jump);
     p.position.set(force?0:(Math.random()-0.5)*(TRACK_WIDTH-4), 0.1, z);
-    p.updateMatrixWorld(); p.userData.boundingBox = new THREE.Box3().setFromObject(p);
+    p.updateMatrixWorld(); 
+    p.userData = { 
+        boundingBox: new THREE.Box3().setFromObject(p),
+        hasTriggered: false 
+    };
     scene.add(p); jumpPads.push(p);
 }
 
@@ -418,7 +423,11 @@ function spawnSuperJumpPad(z) {
     const p = new THREE.Mesh(GEOS.superPad, MATS.superJump);
     p.position.set((Math.random()-0.5)*(TRACK_WIDTH-5), 0.1, z);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(3, 0.1, 16, 100), MATS.white); ring.rotation.x = Math.PI/2; p.add(ring);
-    p.updateMatrixWorld(); p.userData.boundingBox = new THREE.Box3().setFromObject(p);
+    p.updateMatrixWorld(); 
+    p.userData = { 
+        boundingBox: new THREE.Box3().setFromObject(p),
+        hasTriggered: false 
+    };
     scene.add(p); superJumpPads.push(p);
 }
 
@@ -453,7 +462,11 @@ function spawnBoostPad(z) {
     const p = new THREE.Mesh(GEOS.boost, MATS.boost); p.position.set((Math.random()-0.5)*(TRACK_WIDTH-4), 0.1, z);
     const a1 = new THREE.Mesh(GEOS.arrow, MATS.white), a2 = new THREE.Mesh(GEOS.arrow, MATS.white);
     a1.rotation.x = -Math.PI/2; a1.position.set(0, 0.2, 1); a2.rotation.x = -Math.PI/2; a2.position.set(0, 0.2, -2);
-    p.add(a1, a2); p.updateMatrixWorld(); p.userData.boundingBox = new THREE.Box3().setFromObject(p);
+    p.add(a1, a2); p.updateMatrixWorld(); 
+    p.userData = { 
+        boundingBox: new THREE.Box3().setFromObject(p),
+        hasTriggered: false 
+    };
     scene.add(p); boostPads.push(p);
 }
 
@@ -552,34 +565,42 @@ function updatePhysics() {
         });
     }
     jumpPads.forEach(j => { 
-        if (j.userData.boundingBox && j.userData.boundingBox.intersectsSphere(ballSphere)) {
+        if (j.userData.boundingBox && !j.userData.hasTriggered && j.userData.boundingBox.intersectsSphere(ballSphere)) {
+            j.userData.hasTriggered = true;
             ballVelocity.y = JUMP_IMPULSE * 1.5; 
             if (sfxJump && !isMuted) { if (sfxJump.isPlaying) sfxJump.stop(); sfxJump.play(); }
-            speak("점프");
-            showFloatingText("점프!", 0x00ff00);
+            speak("점프으!");
+            showFloatingText("점프으!", 0x00ff00);
         }
     });
     superJumpPads.forEach(s => { 
-        if (s.userData.boundingBox && s.userData.boundingBox.intersectsSphere(ballSphere)) { 
+        if (s.userData.boundingBox && !s.userData.hasTriggered && s.userData.boundingBox.intersectsSphere(ballSphere)) { 
+            s.userData.hasTriggered = true;
             ballVelocity.set(0, 0, 0); // Complete physics reset for a clean start
             isFlying = true; 
             flightTimer = FLIGHT_DURATION; 
             if (sfxJump && !isMuted) { if (sfxJump.isPlaying) sfxJump.stop(); sfxJump.play(); }
-            speak("날아올라");
-            showFloatingText("날아올라!", 0xff00ff);
+            speak("날아올라아~!");
+            showFloatingText("날아올라아~!", 0xff00ff);
         } 
     });
     scorePads = scorePads.filter(p => { if (p.userData.boundingBox && p.userData.boundingBox.intersectsSphere(ballSphere)) { scoreBonus -= p.userData.scorePenalty; removeAndDispose(p); return false; } return true; });
     titanOrbs = titanOrbs.filter(t => { t.rotation.y += 0.05; if (t.userData.boundingBox && t.userData.boundingBox.intersectsSphere(ballSphere)) { isTitan = true; titanTimer = 8; ball.scale.set(3, 3, 3); removeAndDispose(t); return false; } return true; });
-    boostPads.forEach(b => { if (b.userData.boundingBox && b.userData.boundingBox.intersectsSphere(ballSphere)) { isBoosting = true; boostTimer = 3; } });
+    boostPads.forEach(b => { 
+        if (b.userData.boundingBox && !b.userData.hasTriggered && b.userData.boundingBox.intersectsSphere(ballSphere)) { 
+            b.userData.hasTriggered = true;
+            isBoosting = true; 
+            boostTimer = 3; 
+        } 
+    });
     coinMeshes = coinMeshes.filter(c => { 
         c.rotation.y += 0.05;
         if (ball.position.distanceTo(c.position) < ballSphere.radius + 0.6) { 
             coins += 10; 
             localStorage.setItem('totalCoins', coins);
             if (sfxCoin && !isMuted) { if (sfxCoin.isPlaying) sfxCoin.stop(); sfxCoin.play(); }
-            speak("야미");
-            showFloatingText("야미!", 0xffd700);
+            speak("야미야미!");
+            showFloatingText("야미야미!", 0xffd700);
             removeAndDispose(c); return false; 
         } 
         return true; 
