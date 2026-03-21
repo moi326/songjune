@@ -72,7 +72,7 @@ let isFlying = false, flightTimer = 0;
 let isTitan = false, titanTimer = 0;
 let isBoosting = false, boostTimer = 0;
 let isMuted = false;
-let scene, camera, renderer, ball, dirLight, audioListener, bgMusic;
+let scene, camera, renderer, ball, dirLight, ballLight, ballGlow, audioListener, bgMusic;
 let sfxCoin, sfxJump, sfxGameOver, sfxLand;
 let starfield, bottomFloor, grid;
 let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [], floatingTexts = [];
