@@ -43,20 +43,20 @@ const GEOS = {
 };
 
 const MATS = {
-    tile: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8 }),
+    tile: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2, metalness: 0.5 }),
     rim: new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.6 }),
     ball: new THREE.MeshStandardMaterial({ color: 0x00ffcc, roughness: 0.2, metalness: 0.5 }),
 
     stripe: new THREE.MeshBasicMaterial({ color: 0x000000 }),
     bottom: new THREE.MeshStandardMaterial({ color: 0x0a0a20, transparent: true, opacity: 0.4 }),
-    coin: new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1 }),
-    jump: new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
-    superJump: new THREE.MeshStandardMaterial({ color: 0xff00ff }),
-    scorePad: new THREE.MeshStandardMaterial({ color: 0xff0000 }),
-    titan: new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: true }),
-    boost: new THREE.MeshStandardMaterial({ color: 0x00ffcc }),
+    coin: new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1, emissive: 0xffd700, emissiveIntensity: 0.2 }),
+    jump: new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.3 }),
+    superJump: new THREE.MeshStandardMaterial({ color: 0xff55ff, emissive: 0xff55ff, emissiveIntensity: 0.3 }),
+    scorePad: new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff4444, emissiveIntensity: 0.3 }),
+    titan: new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: true, emissive: 0x00ffff, emissiveIntensity: 0.5 }),
+    boost: new THREE.MeshStandardMaterial({ color: 0x33ffff, emissive: 0x33ffff, emissiveIntensity: 0.3 }),
     white: new THREE.MeshBasicMaterial({ color: 0xffffff }),
-    wall: new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 0.8, roughness: 0.2 }),
+    wall: new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.8, roughness: 0.2 }),
     neon: new THREE.MeshBasicMaterial({ color: 0x00ffff })
 };
 
@@ -74,7 +74,7 @@ let isBoosting = false, boostTimer = 0;
 let isMuted = true;
 let scene, camera, renderer, ball, dirLight, audioListener, bgMusic;
 let sfxCoin, sfxJump, sfxGameOver, sfxLand;
-let starfield, bottomFloor, grid;
+let starfield, bottomFloor, grid, planets = [], shootingStars = [];
 let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [], floatingTexts = [];
 let keys = {};
 let ballVelocity = new THREE.Vector3(0, 0, 0);
@@ -182,10 +182,10 @@ function showFloatingText(text, color) {
 function init() {
     initAuth();
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050510);
-    scene.fog = new THREE.Fog(0x050510, 10, 150);
+    scene.background = new THREE.Color(0x020205);
+    scene.fog = new THREE.Fog(0x020205, 50, 500);
 
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1500);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
     camera.position.set(0, 8, 12);
     camera.lookAt(0, 0, 0);
 
@@ -231,15 +231,40 @@ function init() {
     s2.rotation.y = Math.PI/2; ball.add(s1, s2);
     scene.add(ball);
 
-    // Starfield
-    const starGeo = new THREE.BufferGeometry();
-    const starCoords = [];
-    for(let i=0; i<2000; i++) {
-        starCoords.push((Math.random()-0.5)*1500, (Math.random()-0.5)*1500, (Math.random()-0.5)*1500);
+    // Enhanced Starfield - Layered
+    function createStarLayer(count, size, color, range) {
+        const geo = new THREE.BufferGeometry();
+        const coords = [];
+        for(let i=0; i<count; i++) {
+            coords.push((Math.random()-0.5)*range, (Math.random()-0.5)*range, (Math.random()-0.5)*range);
+        }
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(coords, 3));
+        return new THREE.Points(geo, new THREE.PointsMaterial({ color: color, size: size, transparent: true, opacity: 0.8 }));
     }
-    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-    starfield = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.7 }));
+
+    starfield = new THREE.Group();
+    starfield.add(createStarLayer(2000, 0.5, 0xffffff, 2000));
+    starfield.add(createStarLayer(800, 1.2, 0x00ffff, 1500));
+    starfield.add(createStarLayer(500, 1.5, 0xff00ff, 1200));
     scene.add(starfield);
+
+    // Distant Planets
+    const planetColors = [0x3366ff, 0x6633ff, 0xff6633, 0x33ff66];
+    for(let i=0; i<5; i++) {
+        const pGeo = new THREE.SphereGeometry(20 + Math.random()*30, 16, 16);
+        const pMat = new THREE.MeshStandardMaterial({ color: planetColors[i%4], roughness: 0.8, metalness: 0.2 });
+        const p = new THREE.Mesh(pGeo, pMat);
+        p.position.set((Math.random()-0.5)*800, (Math.random()-0.5)*400, -(Math.random()*1500 + 500));
+        scene.add(p);
+        planets.push({ mesh: p, rotSpeed: Math.random()*0.01 });
+    }
+
+    // Distant Nebula Glow
+    const nebulaGeo = new THREE.SphereGeometry(1500, 32, 32);
+    const nebulaMat = new THREE.MeshBasicMaterial({ color: 0x08001a, side: THREE.BackSide, transparent: true, opacity: 0.2 });
+    const nebula = new THREE.Mesh(nebulaGeo, nebulaMat);
+    scene.add(nebula);
+    nebula.userData = { isNebula: true };
 
     bottomFloor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), MATS.bottom);
     bottomFloor.rotation.x = -Math.PI/2; bottomFloor.position.y = -100;
@@ -253,10 +278,20 @@ function init() {
     if (reviveButton) reviveButton.addEventListener('click', reviveGame);
     if (startBtn) startBtn.addEventListener('click', handleSpacePress);
     if (startOverlay) startOverlay.addEventListener('click', (e) => { if (!e.target.closest('button')) handleSpacePress(); });
-    if (gameOverOverlay) gameOverOverlay.style.display = 'click', (e) => { if (!e.target.closest('button')) handleSpacePress(); };
     if (soundToggle) soundToggle.addEventListener('click', toggleSound);
 
     animate();
+}
+
+function spawnShootingStar() {
+    const geo = new THREE.BufferGeometry();
+    const pos = new THREE.Vector3((Math.random()-0.5)*600, (Math.random()*200+100), ball.position.z - 800);
+    const points = [pos.x, pos.y, pos.z, pos.x - 10, pos.y - 10, pos.z + 50];
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+    const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1 });
+    const line = new THREE.Line(geo, mat);
+    scene.add(line);
+    shootingStars.push({ mesh: line, life: 1.0 });
 }
 
 function toggleSound() {
@@ -312,18 +347,11 @@ function reviveGame() {
     if (coins >= REVIVE_COST) {
         coins -= REVIVE_COST; localStorage.setItem('totalCoins', coins);
         state = 'PLAYING'; 
-        // Maintain existing speed-related states if they were active, 
-        // and give a temporary Titan (invincibility) for a safe restart.
         isTitan = true; 
         titanTimer = Math.max(titanTimer, 3); 
         ball.scale.set(3, 3, 3); 
-        
-        // Reset vertical/side velocity to prevent glitchy falls/slides upon revival,
-        // but forward speed is naturally maintained via the score/z-position.
         ballVelocity.set(0, 0, 0);
         ball.position.y = BALL_RADIUS + 10; 
-        // ball.position.z is NOT reset, so score and base speed are maintained.
-
         if (gameOverOverlay) gameOverOverlay.style.display = 'none';
         if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play();
     }
@@ -335,7 +363,6 @@ function spawnFloorRow(z) {
     const wasPrevGap = (z + TILE_SIZE) < -40 && Math.abs((z + TILE_SIZE) % GAP_SPAWN_INTERVAL) < gapThreshold;
 
     if (isGap) {
-        // Detect the very first gap tile and spawn a helping pad on the PREVIOUS (solid) tile
         if (!wasPrevGap) {
             if (Math.random() > 0.5) spawnSuperJumpPad(z + TILE_SIZE); 
             else spawnJumpPad(z + TILE_SIZE, true);
@@ -344,13 +371,10 @@ function spawnFloorRow(z) {
     }
     const tile = new THREE.Mesh(GEOS.tile, MATS.tile);
     tile.position.set(0, -0.25, z); tile.receiveShadow = true;
-    
-    // Add neon grid rim
     const rim = new THREE.Mesh(GEOS.rim, MATS.rim);
     rim.rotation.x = -Math.PI / 2;
-    rim.position.set(0, 0.01, 0); // slightly above tile
+    rim.position.set(0, 0.01, 0); 
     tile.add(rim);
-
     scene.add(tile); floorTiles.push(tile);
     if (Math.abs(z) > 100 && Math.random() > 0.96) spawnScorePad(z);
     if (z < -100 && Math.abs(z % TUNNEL_SPAWN_INTERVAL) < TILE_SIZE) spawnTunnel(z);
@@ -413,10 +437,7 @@ function spawnJumpPad(z, force=false) {
     const p = new THREE.Mesh(GEOS.pad, MATS.jump);
     p.position.set(force?0:(Math.random()-0.5)*(TRACK_WIDTH-4), 0.1, z);
     p.updateMatrixWorld(); 
-    p.userData = { 
-        boundingBox: new THREE.Box3().setFromObject(p),
-        hasTriggered: false 
-    };
+    p.userData = { boundingBox: new THREE.Box3().setFromObject(p), hasTriggered: false };
     scene.add(p); jumpPads.push(p);
 }
 
@@ -425,10 +446,7 @@ function spawnSuperJumpPad(z) {
     p.position.set((Math.random()-0.5)*(TRACK_WIDTH-5), 0.1, z);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(3, 0.1, 16, 100), MATS.white); ring.rotation.x = Math.PI/2; p.add(ring);
     p.updateMatrixWorld(); 
-    p.userData = { 
-        boundingBox: new THREE.Box3().setFromObject(p),
-        hasTriggered: false 
-    };
+    p.userData = { boundingBox: new THREE.Box3().setFromObject(p), hasTriggered: false };
     scene.add(p); superJumpPads.push(p);
 }
 
@@ -464,10 +482,7 @@ function spawnBoostPad(z) {
     const a1 = new THREE.Mesh(GEOS.arrow, MATS.white), a2 = new THREE.Mesh(GEOS.arrow, MATS.white);
     a1.rotation.x = -Math.PI/2; a1.position.set(0, 0.2, 1); a2.rotation.x = -Math.PI/2; a2.position.set(0, 0.2, -2);
     p.add(a1, a2); p.updateMatrixWorld(); 
-    p.userData = { 
-        boundingBox: new THREE.Box3().setFromObject(p),
-        hasTriggered: false 
-    };
+    p.userData = { boundingBox: new THREE.Box3().setFromObject(p), hasTriggered: false };
     scene.add(p); boostPads.push(p);
 }
 
@@ -501,14 +516,8 @@ function updatePhysics() {
             const d = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), MATS.white);
             d.position.copy(ball.position); scene.add(d); flightTrail.push({ mesh: d, life: 1.0 });
         }
-        if (flightTimer <= 0) { 
-            isFlying = false; 
-            ballVelocity.y = 0; // Reset velocity when flight ends
-        }
-    } else { 
-        ballVelocity.y += GRAVITY; 
-        ball.position.y += ballVelocity.y; 
-    }
+        if (flightTimer <= 0) { isFlying = false; ballVelocity.y = 0; }
+    } else { ballVelocity.y += GRAVITY; ball.position.y += ballVelocity.y; }
 
     for(let i=flightTrail.length-1; i>=0; i--) {
         const t = flightTrail[i]; t.life -= 0.02; t.mesh.scale.setScalar(t.life);
@@ -516,15 +525,9 @@ function updatePhysics() {
     }
     floorTiles.forEach(tile => {
         if (Math.abs(ball.position.z - tile.position.z) < TILE_SIZE/2 + BALL_RADIUS && Math.abs(ball.position.x) < TRACK_WIDTH/2 + BALL_RADIUS) {
-            // Robust floor collision: check if ball is below ground level (0)
             if (ball.position.y - BALL_RADIUS <= 0.1 && ballVelocity.y <= 0 && !isFlying) { 
-                // Play landing SFX if fall was significant
-                if (ballVelocity.y < -0.2 && sfxLand && !isMuted) {
-                    if (sfxLand.isPlaying) sfxLand.stop();
-                    sfxLand.play();
-                }
-                ball.position.y = BALL_RADIUS; 
-                ballVelocity.y = 0; 
+                if (ballVelocity.y < -0.2 && sfxLand && !isMuted) { if (sfxLand.isPlaying) sfxLand.stop(); sfxLand.play(); }
+                ball.position.y = BALL_RADIUS; ballVelocity.y = 0; 
             }
         }
     });
@@ -553,6 +556,7 @@ function updatePhysics() {
     if (Math.abs(spawnZ % 10) < speed) spawnCoin(spawnZ);
     if (Math.abs(spawnZ % 300) < speed) spawnTitanOrb(spawnZ);
     if (Math.abs(spawnZ % 100) < speed) spawnBoostPad(spawnZ);
+    if (Math.random() > 0.99) spawnShootingStar();
 
     if (!isFlying) {
         obstacles = obstacles.filter(o => {
@@ -565,57 +569,47 @@ function updatePhysics() {
     }
     jumpPads.forEach(j => { 
         if (j.userData.boundingBox && !j.userData.hasTriggered && j.userData.boundingBox.intersectsSphere(ballSphere)) {
-            j.userData.hasTriggered = true;
-            ballVelocity.y = JUMP_IMPULSE * 1.5; 
+            j.userData.hasTriggered = true; ballVelocity.y = JUMP_IMPULSE * 1.5; 
             if (sfxJump && !isMuted) { if (sfxJump.isPlaying) sfxJump.stop(); sfxJump.play(); }
-            speak("점프으!");
-            showFloatingText("점프으!", 0x00ff00);
+            speak("점프으!"); showFloatingText("점프으!", 0x00ff00);
         }
     });
     superJumpPads.forEach(s => { 
         if (s.userData.boundingBox && !s.userData.hasTriggered && s.userData.boundingBox.intersectsSphere(ballSphere)) { 
-            s.userData.hasTriggered = true;
-            ballVelocity.set(0, 0, 0); // Complete physics reset for a clean start
-            isFlying = true; 
-            flightTimer = FLIGHT_DURATION; 
+            s.userData.hasTriggered = true; ballVelocity.set(0, 0, 0); isFlying = true; flightTimer = FLIGHT_DURATION; 
             if (sfxJump && !isMuted) { if (sfxJump.isPlaying) sfxJump.stop(); sfxJump.play(); }
-            speak("날아올라아~!");
-            showFloatingText("날아올라아~!", 0xff00ff);
+            speak("날아올라아~!"); showFloatingText("날아올라아~!", 0xff00ff);
         } 
     });
     scorePads = scorePads.filter(p => { if (p.userData.boundingBox && p.userData.boundingBox.intersectsSphere(ballSphere)) { scoreBonus -= p.userData.scorePenalty; removeAndDispose(p); return false; } return true; });
     titanOrbs = titanOrbs.filter(t => { t.rotation.y += 0.05; if (t.userData.boundingBox && t.userData.boundingBox.intersectsSphere(ballSphere)) { isTitan = true; titanTimer = 8; ball.scale.set(3, 3, 3); removeAndDispose(t); return false; } return true; });
-    boostPads.forEach(b => { 
-        if (b.userData.boundingBox && !b.userData.hasTriggered && b.userData.boundingBox.intersectsSphere(ballSphere)) { 
-            b.userData.hasTriggered = true;
-            isBoosting = true; 
-            boostTimer = 3; 
-        } 
-    });
+    boostPads.forEach(b => { if (b.userData.boundingBox && !b.userData.hasTriggered && b.userData.boundingBox.intersectsSphere(ballSphere)) { b.userData.hasTriggered = true; isBoosting = true; boostTimer = 3; } });
     coinMeshes = coinMeshes.filter(c => { 
         c.rotation.y += 0.05;
         if (ball.position.distanceTo(c.position) < ballSphere.radius + 0.6) { 
-            coins += 10; 
-            localStorage.setItem('totalCoins', coins);
+            coins += 10; localStorage.setItem('totalCoins', coins);
             if (sfxCoin && !isMuted) { if (sfxCoin.isPlaying) sfxCoin.stop(); sfxCoin.play(); }
-            speak("야미야미!");
-            showFloatingText("야미야미!", 0xffd700);
+            speak("야미야미!"); showFloatingText("야미야미!", 0xffd700);
             removeAndDispose(c); return false; 
         } 
         return true; 
     });
 
-    const cleanZ = ball.position.z + 50;
+    const cleanZ = ball.position.z + 100;
     [floorTiles, obstacles, jumpPads, superJumpPads, scorePads, coinMeshes, tunnels, titanOrbs, boostPads].forEach(arr => {
         for(let i=arr.length-1; i>=0; i--) if (arr[i].position.z > cleanZ) { removeAndDispose(arr[i], arr); }
     });
 
     if (dirLight) { dirLight.position.z = ball.position.z + 30; dirLight.target.position.copy(ball.position); dirLight.target.updateMatrixWorld(); }
-    
-    // Background follow
     if (starfield) starfield.position.z = ball.position.z;
     if (bottomFloor) bottomFloor.position.z = ball.position.z;
     if (grid) grid.position.z = ball.position.z;
+    planets.forEach(p => { p.mesh.rotation.y += p.rotSpeed; p.mesh.position.z = ball.position.z - 1000; });
+    shootingStars.forEach((s, i) => {
+        s.life -= 0.02; s.mesh.position.z += 10; s.mesh.material.opacity = s.life;
+        if (s.life <= 0) { scene.remove(s.mesh); shootingStars.splice(i, 1); }
+    });
+    scene.children.forEach(child => { if (child.userData && child.userData.isNebula) child.position.z = ball.position.z; });
 
     camera.position.z = ball.position.z + 14; camera.position.x = ball.position.x * 0.5; camera.position.y = isFlying ? 50 : 8 + Math.max(0, -ball.position.y * 0.2);
     camera.lookAt(ball.position.x, ball.position.y, ball.position.z - 10);
@@ -631,25 +625,12 @@ function gameOver() {
 }
 
 function animate() { 
-    requestAnimationFrame(animate); 
-    updatePhysics(); 
-    
-    // Pulse floor rims
-    const time = Date.now() * 0.002;
-    MATS.rim.opacity = 0.3 + Math.abs(Math.sin(time)) * 0.4;
-
-    // Floating texts animation
+    requestAnimationFrame(animate); updatePhysics(); 
+    MATS.rim.opacity = 0.3 + Math.abs(Math.sin(Date.now() * 0.002)) * 0.4;
     for(let i=floatingTexts.length-1; i>=0; i--) {
-        const ft = floatingTexts[i];
-        ft.life -= 0.02;
-        ft.mesh.position.y += 0.1;
-        ft.mesh.material.opacity = ft.life;
-        if (ft.life <= 0) {
-            scene.remove(ft.mesh);
-            floatingTexts.splice(i, 1);
-        }
+        const ft = floatingTexts[i]; ft.life -= 0.02; ft.mesh.position.y += 0.1; ft.mesh.material.opacity = ft.life;
+        if (ft.life <= 0) { scene.remove(ft.mesh); floatingTexts.splice(i, 1); }
     }
-
     renderer.render(scene, camera); 
 }
 init();

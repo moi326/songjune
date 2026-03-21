@@ -6,51 +6,36 @@ A high-performance, immersive 3D rolling ball game built with Three.js. This ver
 
 ## Design & Aesthetics
 
-- **Visual Style:** High-contrast aesthetics with a deep space theme.
-- **Lighting:** 
-    - Original intensities restored: Ambient (0.4) and Directional (1.0).
-    - No direct light sources attached to the player ball.
-    - All game objects use standard materials without self-illumination (emissive effects removed).
+- **Visual Style:** High-contrast aesthetics with a majestic "Space Odyssey" theme.
+- **Lighting & Visibility:** 
+    - Ambient (0.4) and Directional (1.0).
+    - **Brightened Elements:** Floor tiles, obstacles, and pads have been brightened for better visibility.
+    - **Subtle Glow:** Key game pads (jump, boost, score) feature a subtle emissive glow to make them "pop" against the dark space background.
+    - Standard materials used with optimized roughness and metalness.
 - **Background:**
-    - Original background color (`0x050510`) and fog (`0x050510`, 10, 150) restored.
-    - Deep space scene with a 2000-star starfield.
-    - Pulsing neon grid on the floor.
+    - **Space Adventure Theme:** 
+        - **Distant Planets:** Large, slowly rotating spheres in various colors.
+        - **Shooting Stars:** Dynamic streaks of light flying across the distance.
+        - **Layered Starfield:** Multiple layers of stars for a parallax effect.
+        - **Distant Nebula:** A subtle, deep purple glow effect.
 - **Voice Feedback:**
     - Real-time voice feedback using `SpeechSynthesisUtterance`.
-    - Natural voice parameters (rate 1.0, pitch 1.0).
 - **Animations:**
     - High-performance sprite-based floating text.
     - Smooth camera movement following the ball.
-    - White particle trails during flight mode.
 
 ## Features
 
 - **Core Gameplay:** Endless runner style with increasing speed based on score.
-- **Obstacles:** Variety of moving and static obstacles (boxes, crushers, windmills, bouncers, lasers, pendulums, gates).
-- **Power-ups:**
-    - **Jump Pad:** Standard jump.
-    - **Super Jump Pad:** Initiates flight mode with a white trail.
-    - **Titan Orb:** Increases ball size and grants invincibility.
-    - **Boost Pad:** Temporary speed increase and FOV expansion.
-- **Currency & Scoring:**
-    - Coins collected during gameplay (stored in LocalStorage and Firestore).
-    - Score calculated based on distance and bonuses.
-    - **Revive System:** Costs 300 coins to continue after a crash.
-- **Firebase Integration:**
-    - Google Authentication for user identification.
-    - Firestore synchronization for high scores and coin totals.
-    - Automatic data merging between LocalStorage and Cloud.
-
-## File Structure
-
-- `index.html`: UI structure, including game overlays and auth status.
-- `style.css`: Modern CSS using variables and OKLCH color space.
-- `main.js`: Core game logic, Three.js implementation, and Firebase integration.
-- `firebase-config.js`: Firebase SDK configuration.
+- **Obstacles:** Variety of moving and static obstacles.
+- **Power-ups:** Jump, Super Jump (Flight), Titan Orb (Invincibility), Boost Pad.
+- **Currency & Scoring:** Coins, Score, and High Score systems.
+- **Firebase Integration:** Google Auth and Firestore data sync.
 
 ## Recent Changes (March 21, 2026)
 
-- **Initial Brightness Restoration:** 
-    - Reverted lighting (Ambient 0.4, Directional 1.0) and background/fog colors (`0x050510`) to the state of the first 3D version.
-    - Completely removed ball headlight and glow effects.
-    - Removed all emissive (shining) properties from materials while keeping original colors.
+- **Aesthetic Refinement:** 
+    - Brightened floor tiles (`0x222222`) and obstacles for better gameplay clarity.
+    - Re-introduced subtle emissive properties to interactive pads to improve visibility.
+    - Optimized material properties (roughness/metalness) for a cleaner look.
+- **Space Odyssey Upgrade:** Added planets and shooting stars to the background.
