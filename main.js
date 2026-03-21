@@ -265,6 +265,14 @@ function init() {
     if (soundToggle) soundToggle.addEventListener('click', toggleSound);
 
     animate();
+    
+    // Auto-start for the user after 1.5 seconds
+    setTimeout(() => {
+        if (state === 'START') {
+            console.log("Auto-starting game...");
+            handleSpacePress();
+        }
+    }, 1500);
 }
 
 function toggleSound() {
