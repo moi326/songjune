@@ -72,6 +72,7 @@ let isTitan = false, titanTimer = 0;
 let isBoosting = false, boostTimer = 0;
 let isMuted = true;
 let scene, camera, renderer, ball, dirLight;
+let bottomFloor, grid;
 let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [], floatingTexts = [];
 let keys = {};
 let ballVelocity = new THREE.Vector3(0, 0, 0);
@@ -171,7 +172,6 @@ function showFloatingText(text, color) {
 
 // --- INITIALIZATION ---
 function init() {
-    initAuth();
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050510);
     scene.fog = new THREE.Fog(0x050510, 20, 250);
@@ -206,34 +206,32 @@ function init() {
     bottomFloor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), MATS.bottom);
     bottomFloor.rotation.x = -Math.PI/2; bottomFloor.position.y = -100;
     scene.add(bottomFloor);
-    grid = new THREE.GridHelper(1000, 40, 0x00ffff, 0xff00ff);
+    grid = new THREE.GridHelper(1000, 50, 0x222244, 0x111122);
     grid.position.y = -99.9; scene.add(grid);
 
     window.addEventListener('keydown', (e) => { keys[e.code] = true; if (e.code === 'Space') handleSpacePress(); });
     window.addEventListener('keyup', (e) => keys[e.code] = false);
     window.addEventListener('resize', onWindowResize);
+    window.addEventListener('click', () => { if (state === 'START') handleSpacePress(); });
+    
     if (reviveButton) reviveButton.addEventListener('click', reviveGame);
-    if (startBtn) startBtn.addEventListener('click', handleSpacePress);
-    if (startOverlay) startOverlay.addEventListener('click', (e) => { if (!e.target.closest('button')) handleSpacePress(); });
-    if (gameOverOverlay) gameOverOverlay.addEventListener('click', (e) => { if (!e.target.closest('button')) handleSpacePress(); });
-    if (soundToggle) soundToggle.addEventListener('click', toggleSound);
+    if (startBtn) startBtn.addEventListener('click', (e) => { e.stopPropagation(); handleSpacePress(); });
+    if (startOverlay) startOverlay.addEventListener('click', handleSpacePress);
+    if (gameOverOverlay) gameOverOverlay.addEventListener('click', (e) => { 
+        if (!e.target.closest('button')) handleSpacePress(); 
+    });
+    if (soundToggle) {
+        soundToggle.addEventListener('click', toggleSound);
+        soundToggle.innerText = isMuted ? "🔇 Sound Off" : "🔊 Sound On";
+    }
 
     animate();
+    setTimeout(initAuth, 1000);
 }
 
 function toggleSound() {
     isMuted = !isMuted;
-    const vol = isMuted ? 0 : 0.5;
-    const sfxVol = isMuted ? 0 : 0.8;
-    if (bgMusic) {
-        bgMusic.setVolume(vol);
-        if (soundToggle) soundToggle.innerText = isMuted ? "🔇 Sound Off" : "🔊 Sound On";
-        if (!isMuted && state === 'PLAYING' && !bgMusic.isPlaying) bgMusic.play();
-    }
-    if (sfxCoin) sfxCoin.setVolume(sfxVol);
-    if (sfxJump) sfxJump.setVolume(sfxVol);
-    if (sfxGameOver) sfxGameOver.setVolume(sfxVol);
-    if (sfxLand) sfxLand.setVolume(sfxVol);
+    if (soundToggle) soundToggle.innerText = isMuted ? "🔇 Sound Off" : "🔊 Sound On";
 }
 
 function handleSpacePress() { 
@@ -283,7 +281,6 @@ function reviveGame() {
         // ball.position.z is NOT reset, so score and base speed are maintained.
 
         if (gameOverOverlay) gameOverOverlay.style.display = 'none';
-        if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play();
     }
 }
 
@@ -478,11 +475,6 @@ function updatePhysics() {
         if (Math.abs(ball.position.z - tile.position.z) < TILE_SIZE/2 + BALL_RADIUS && Math.abs(ball.position.x) < TRACK_WIDTH/2 + BALL_RADIUS) {
             // Robust floor collision: check if ball is below ground level (0)
             if (ball.position.y - BALL_RADIUS <= 0.1 && ballVelocity.y <= 0 && !isFlying) { 
-                // Play landing SFX if fall was significant
-                if (ballVelocity.y < -0.2 && sfxLand && !isMuted) {
-                    if (sfxLand.isPlaying) sfxLand.stop();
-                    sfxLand.play();
-                }
                 ball.position.y = BALL_RADIUS; 
                 ballVelocity.y = 0; 
             }
