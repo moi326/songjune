@@ -43,19 +43,19 @@ const GEOS = {
 };
 
 const MATS = {
-    tile: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8, emissive: 0x112233, emissiveIntensity: 1.5 }),
-    rim: new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 1.0 }),
+    tile: new THREE.MeshStandardMaterial({ color: 0x223344, roughness: 0.5, metalness: 0.2 }),
+    rim: new THREE.MeshBasicMaterial({ color: 0x4444ff, transparent: true, opacity: 0.2 }),
     ball: new THREE.MeshStandardMaterial({ color: 0x00ffcc, roughness: 0.2, metalness: 0.5 }),
     stripe: new THREE.MeshBasicMaterial({ color: 0x000000 }),
-    bottom: new THREE.MeshStandardMaterial({ color: 0x0a0a20, transparent: true, opacity: 0.4 }),
-    coin: new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1, emissive: 0xffd700, emissiveIntensity: 0.5 }),
-    jump: new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 1 }),
-    superJump: new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff00ff, emissiveIntensity: 2 }),
-    scorePad: new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.5 }),
-    titan: new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: true, emissive: 0x00ffff, emissiveIntensity: 2 }),
-    boost: new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 1 }),
+    bottom: new THREE.MeshStandardMaterial({ color: 0x111122, transparent: true, opacity: 0.5 }),
+    coin: new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.5 }),
+    jump: new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
+    superJump: new THREE.MeshStandardMaterial({ color: 0xff00ff }),
+    scorePad: new THREE.MeshStandardMaterial({ color: 0xff0000 }),
+    titan: new THREE.MeshStandardMaterial({ color: 0x00ffff, wireframe: true }),
+    boost: new THREE.MeshStandardMaterial({ color: 0x00ffcc }),
     white: new THREE.MeshBasicMaterial({ color: 0xffffff }),
-    wall: new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 0.8, roughness: 0.2 }),
+    wall: new THREE.MeshStandardMaterial({ color: 0x0a0a0a }),
     neon: new THREE.MeshBasicMaterial({ color: 0x00ffff })
 };
 
@@ -70,10 +70,8 @@ let coins = parseInt(localStorage.getItem('totalCoins')) || 0, lastDisplayedCoin
 let isFlying = false, flightTimer = 0;
 let isTitan = false, titanTimer = 0;
 let isBoosting = false, boostTimer = 0;
-let isMuted = false;
-let scene, camera, renderer, ball, dirLight, ballLight, ballGlow, audioListener, bgMusic;
-let sfxCoin, sfxJump, sfxGameOver, sfxLand;
-let starfield, bottomFloor, grid;
+let isMuted = true;
+let scene, camera, renderer, ball, dirLight;
 let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [], floatingTexts = [];
 let keys = {};
 let ballVelocity = new THREE.Vector3(0, 0, 0);
@@ -149,13 +147,7 @@ async function saveUserDataToCloud() {
 
 // --- VOICE & VISUAL FEEDBACK ---
 function speak(text) {
-    if (isMuted) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ko-KR';
-    utterance.rate = 1.0; // Natural human speed
-    utterance.pitch = 1.0; // Standard pitch
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    // Audio disabled
 }
 
 function showFloatingText(text, color) {
@@ -181,8 +173,8 @@ function showFloatingText(text, color) {
 function init() {
     initAuth();
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0a25);
-    scene.fog = new THREE.Fog(0x0a0a25, 20, 350);
+    scene.background = new THREE.Color(0x050510);
+    scene.fog = new THREE.Fog(0x050510, 20, 250);
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1500);
     camera.position.set(0, 8, 12);
@@ -196,27 +188,8 @@ function init() {
     const container = document.getElementById('canvas-container');
     if (container) container.appendChild(renderer.domElement);
 
-    audioListener = new THREE.AudioListener();
-    camera.add(audioListener);
-    bgMusic = new THREE.Audio(audioListener);
-    sfxCoin = new THREE.Audio(audioListener);
-    sfxJump = new THREE.Audio(audioListener);
-    sfxGameOver = new THREE.Audio(audioListener);
-    sfxLand = new THREE.Audio(audioListener);
-
-    const audioLoader = new THREE.AudioLoader();
-    audioLoader.load(MUSIC_URL, (b) => { 
-        bgMusic.setBuffer(b); 
-        bgMusic.setLoop(true); 
-        bgMusic.setVolume(0.5); 
-    });
-    audioLoader.load(COIN_SFX_URL, (b) => sfxCoin.setBuffer(b));
-    audioLoader.load(JUMP_SFX_URL, (b) => sfxJump.setBuffer(b));
-    audioLoader.load(OVER_SFX_URL, (b) => sfxGameOver.setBuffer(b));
-    audioLoader.load(LAND_SFX_URL, (b) => sfxLand.setBuffer(b));
-
-    scene.add(new THREE.AmbientLight(0xffffff, 1.0));
-    dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+    dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(30, 50, 30);
     dirLight.castShadow = true;
     dirLight.shadow.camera.left = -30; dirLight.shadow.camera.right = 30;
@@ -224,34 +197,11 @@ function init() {
     dirLight.shadow.mapSize.width = 1024; dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
 
-    // Ball Headlight
-    ballLight = new THREE.SpotLight(0x00ffff, 1000);
-    ballLight.angle = Math.PI / 4;
-    ballLight.penumbra = 0.3;
-    ballLight.decay = 1;
-    ballLight.distance = 150;
-    scene.add(ballLight);
-    scene.add(ballLight.target);
-
-    // Ball Immediate Glow
-    ballGlow = new THREE.PointLight(0xffffff, 500, 30);
-    scene.add(ballGlow);
-
     ball = new THREE.Mesh(GEOS.ball, MATS.ball);
     ball.castShadow = true;
     const s1 = new THREE.Mesh(GEOS.stripe, MATS.stripe), s2 = new THREE.Mesh(GEOS.stripe, MATS.stripe);
     s2.rotation.y = Math.PI/2; ball.add(s1, s2);
     scene.add(ball);
-
-    // Starfield
-    const starGeo = new THREE.BufferGeometry();
-    const starCoords = [];
-    for(let i=0; i<2000; i++) {
-        starCoords.push((Math.random()-0.5)*1500, (Math.random()-0.5)*1500, (Math.random()-0.5)*1500);
-    }
-    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-    starfield = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.7 }));
-    scene.add(starfield);
 
     bottomFloor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), MATS.bottom);
     bottomFloor.rotation.x = -Math.PI/2; bottomFloor.position.y = -100;
@@ -288,10 +238,6 @@ function toggleSound() {
 
 function handleSpacePress() { 
     if (state === 'START' || state === 'GAMEOVER') { 
-        if (THREE.AudioContext.getContext().state === 'suspended') {
-            THREE.AudioContext.getContext().resume();
-        }
-        if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play(); 
         resetGame(); 
     } 
 }
@@ -581,9 +527,6 @@ function updatePhysics() {
         if (j.userData.boundingBox && !j.userData.hasTriggered && j.userData.boundingBox.intersectsSphere(ballSphere)) {
             j.userData.hasTriggered = true;
             ballVelocity.y = JUMP_IMPULSE * 1.5; 
-            if (sfxJump && !isMuted) { if (sfxJump.isPlaying) sfxJump.stop(); sfxJump.play(); }
-            speak("와! 멋진 점프예요!");
-            showFloatingText("나이스 점프!", 0x00ff00);
         }
     });
     superJumpPads.forEach(s => { 
@@ -592,9 +535,6 @@ function updatePhysics() {
             ballVelocity.set(0, 0, 0); // Complete physics reset for a clean start
             isFlying = true; 
             flightTimer = FLIGHT_DURATION; 
-            if (sfxJump && !isMuted) { if (sfxJump.isPlaying) sfxJump.stop(); sfxJump.play(); }
-            speak("환상적인 비행인데요? 계속 가봐요!");
-            showFloatingText("환상적인 비행!", 0xff00ff);
         } 
     });
     scorePads = scorePads.filter(p => { if (p.userData.boundingBox && p.userData.boundingBox.intersectsSphere(ballSphere)) { scoreBonus -= p.userData.scorePenalty; removeAndDispose(p); return false; } return true; });
@@ -611,9 +551,6 @@ function updatePhysics() {
         if (ball.position.distanceTo(c.position) < ballSphere.radius + 0.6) { 
             coins += 10; 
             localStorage.setItem('totalCoins', coins);
-            if (sfxCoin && !isMuted) { if (sfxCoin.isPlaying) sfxCoin.stop(); sfxCoin.play(); }
-            speak("코인 정말 맛있네요! 최고예요!");
-            showFloatingText("코인 꿀맛!", 0xffd700);
             removeAndDispose(c); return false; 
         } 
         return true; 
@@ -626,16 +563,7 @@ function updatePhysics() {
 
     if (dirLight) { dirLight.position.z = ball.position.z + 30; dirLight.target.position.copy(ball.position); dirLight.target.updateMatrixWorld(); }
     
-    // Ball Light follow
-    if (ballLight) {
-        ballLight.position.set(ball.position.x, ball.position.y + 2, ball.position.z);
-        ballLight.target.position.set(ball.position.x, 0, ball.position.z - 20);
-        ballLight.target.updateMatrixWorld();
-    }
-    if (ballGlow) ballGlow.position.copy(ball.position);
-
     // Background follow
-    if (starfield) starfield.position.z = ball.position.z;
     if (bottomFloor) bottomFloor.position.z = ball.position.z;
     if (grid) grid.position.z = ball.position.z;
 
@@ -644,8 +572,7 @@ function updatePhysics() {
 }
 
 function gameOver() {
-    state = 'GAMEOVER'; if (bgMusic && bgMusic.isPlaying) bgMusic.pause();
-    if (sfxGameOver && !isMuted) sfxGameOver.play();
+    state = 'GAMEOVER'; 
     if (finalScore) finalScore.innerText = score; 
     localStorage.setItem('highScore', highScore); saveUserDataToCloud();
     if (gameOverOverlay) gameOverOverlay.style.display = 'flex'; 
@@ -656,10 +583,6 @@ function animate() {
     requestAnimationFrame(animate); 
     updatePhysics(); 
     
-    // Pulse floor rims
-    const time = Date.now() * 0.002;
-    MATS.rim.opacity = 0.3 + Math.abs(Math.sin(time)) * 0.4;
-
     // Floating texts animation
     for(let i=floatingTexts.length-1; i>=0; i--) {
         const ft = floatingTexts[i];
