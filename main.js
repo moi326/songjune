@@ -386,9 +386,31 @@ function spawnObstacle(z) {
         mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, TRACK_WIDTH+4), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 }));
         mesh.rotation.z = Math.PI/2; mesh.position.set(0, 1.5, z); mesh.userData = { isLaser: true, timeOffset: Math.random()*Math.PI*2, blinkSpeed: 0.003 };
     } else if (type === 'pendulum') {
-        mesh = new THREE.Group(); const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 10), MATS.wall); rod.position.y = -5;
-        const pball = new THREE.Mesh(new THREE.SphereGeometry(1.5, 24, 24), MATS.wall); pball.position.y = -10;
-        mesh.add(rod, pball); mesh.position.set(0, 12, z); mesh.userData = { isPendulum: true, timeOffset: Math.random()*Math.PI*2, speed: 0.002, angle: Math.PI/3 };
+        mesh = new THREE.Group(); 
+        const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 10), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff00ff, emissiveIntensity: 0.5 })); 
+        rod.position.y = -5;
+        
+        // Mini Sun for pendulum
+        const sunMat = new THREE.MeshStandardMaterial({ 
+            color: 0xffaa00, 
+            emissive: 0xff5500, 
+            emissiveIntensity: 2.0,
+            roughness: 0,
+            metalness: 0
+        });
+        const pball = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), sunMat); 
+        pball.position.y = -10;
+        
+        // Add a small glow ring around the mini sun
+        const ring = new THREE.Mesh(
+            new THREE.TorusGeometry(2.2, 0.05, 16, 100),
+            new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.5 })
+        );
+        ring.position.y = -10;
+        
+        mesh.add(rod, pball, ring); 
+        mesh.position.set(0, 12, z); 
+        mesh.userData = { isPendulum: true, timeOffset: Math.random()*Math.PI*2, speed: 0.002, angle: Math.PI/3 };
     } else if (type === 'gates') {
         mesh = new THREE.Group(); const l = new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH/2, 4, 1), MATS.wall), r = new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH/2, 4, 1), MATS.wall);
         l.position.x = -TRACK_WIDTH/4-2; r.position.x = TRACK_WIDTH/4+2; mesh.add(l, r); mesh.position.set(0, 2, z);
@@ -583,6 +605,23 @@ function gameOver() {
     if (finalScore) finalScore.innerText = score; 
     localStorage.setItem('highScore', highScore); saveUserDataToCloud();
     if (gameOverOverlay) gameOverOverlay.style.display = 'flex'; 
+    if (reviveContainer) reviveContainer.style.display = coins >= REVIVE_COST ? 'block' : 'none';
+}
+
+function reviveGame() {
+    if (coins >= REVIVE_COST) {
+        coins -= REVIVE_COST; 
+        localStorage.setItem('totalCoins', coins);
+        state = 'PLAYING'; 
+        isTitan = true; 
+        titanTimer = 3; 
+        ball.scale.set(3, 3, 3); 
+        ballVelocity.set(0, 0, 0);
+        ball.position.y = BALL_RADIUS + 10; 
+        if (gameOverOverlay) gameOverOverlay.style.display = 'none';
+        if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play();
+        speak("부활 완료! 다시 달립니다!");
+    }
 }
 
 function animate() { 
