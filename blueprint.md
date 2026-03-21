@@ -8,12 +8,12 @@ A high-performance, immersive 3D rolling ball game built with Three.js. This ver
 
 - **Visual Style:** High-contrast aesthetics with a deep space theme.
 - **Lighting:** 
-    - Ambient (0.6) and directional (1.5) lighting.
+    - Original intensities restored: Ambient (0.4) and Directional (1.0).
     - No direct light sources attached to the player ball.
     - All game objects use standard materials without self-illumination (emissive effects removed).
 - **Background:**
+    - Original background color (`0x050510`) and fog (`0x050510`, 10, 150) restored.
     - Deep space scene with a 2000-star starfield.
-    - Fog effect (0x0a0a25) for depth and performance.
     - Pulsing neon grid on the floor.
 - **Voice Feedback:**
     - Real-time voice feedback using `SpeechSynthesisUtterance`.
@@ -21,7 +21,7 @@ A high-performance, immersive 3D rolling ball game built with Three.js. This ver
 - **Animations:**
     - High-performance sprite-based floating text.
     - Smooth camera movement following the ball.
-    - Particle trails (white) during flight mode.
+    - White particle trails during flight mode.
 
 ## Features
 
@@ -50,8 +50,7 @@ A high-performance, immersive 3D rolling ball game built with Three.js. This ver
 
 ## Recent Changes (March 21, 2026)
 
-- **Lighting & Effect Removal:** 
-    - Removed ball headlight and glow effects.
-    - Removed emissive (glowing) properties from all game object materials (tiles, coins, obstacles, power-ups).
-    - Preserved original object colors.
-    - Changed flight trail color to plain white.
+- **Initial Brightness Restoration:** 
+    - Reverted lighting (Ambient 0.4, Directional 1.0) and background/fog colors (`0x050510`) to the state of the first 3D version.
+    - Completely removed ball headlight and glow effects.
+    - Removed all emissive (shining) properties from materials while keeping original colors.

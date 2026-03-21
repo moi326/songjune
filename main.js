@@ -182,8 +182,8 @@ function showFloatingText(text, color) {
 function init() {
     initAuth();
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0a25);
-    scene.fog = new THREE.Fog(0x0a0a25, 20, 350);
+    scene.background = new THREE.Color(0x050510);
+    scene.fog = new THREE.Fog(0x050510, 10, 150);
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1500);
     camera.position.set(0, 8, 12);
@@ -216,8 +216,8 @@ function init() {
     audioLoader.load(OVER_SFX_URL, (b) => sfxGameOver.setBuffer(b));
     audioLoader.load(LAND_SFX_URL, (b) => sfxLand.setBuffer(b));
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+    dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
     dirLight.position.set(30, 50, 30);
     dirLight.castShadow = true;
     dirLight.shadow.camera.left = -30; dirLight.shadow.camera.right = 30;
@@ -253,7 +253,7 @@ function init() {
     if (reviveButton) reviveButton.addEventListener('click', reviveGame);
     if (startBtn) startBtn.addEventListener('click', handleSpacePress);
     if (startOverlay) startOverlay.addEventListener('click', (e) => { if (!e.target.closest('button')) handleSpacePress(); });
-    if (gameOverOverlay) gameOverOverlay.addEventListener('click', (e) => { if (!e.target.closest('button')) handleSpacePress(); });
+    if (gameOverOverlay) gameOverOverlay.style.display = 'click', (e) => { if (!e.target.closest('button')) handleSpacePress(); };
     if (soundToggle) soundToggle.addEventListener('click', toggleSound);
 
     animate();
