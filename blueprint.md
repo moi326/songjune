@@ -8,9 +8,9 @@ A high-performance, immersive 3D rolling ball game built with Three.js. This ver
 
 - **Visual Style:** High-contrast neon aesthetics with a deep space theme.
 - **Lighting:** 
-    - High-intensity ambient (1.0) and directional (2.5) lighting for a vibrant environment.
-    - Dynamic SpotLight "headlight" and PointLight "glow" attached to the player ball.
-    - Intense emissive materials for tiles, coins, and power-ups.
+    - Moderate intensity ambient (0.6) and directional (1.5) lighting for a balanced environment.
+    - Dynamic SpotLight "headlight" (500 intensity) and PointLight "glow" (250 intensity) attached to the player ball.
+    - Subtle emissive materials for tiles, coins, and power-ups.
 - **Background:**
     - Deep space scene with a 2000-star starfield.
     - Fog effect (0x0a0a25) for depth and performance.
@@ -50,9 +50,7 @@ A high-performance, immersive 3D rolling ball game built with Three.js. This ver
 
 ## Recent Changes (March 21, 2026)
 
-- **Aesthetic Restoration:** 
-    - Reverted lighting and background to original "intense" levels.
-    - Restored ball headlight and immediate glow effects.
-    - Restored high emissive intensities for all game objects.
-    - Reverted voice feedback to natural rate and pitch.
-    - Set sound to be enabled by default.
+- **Lighting & Sound Adjustment:** 
+    - Reduced lighting intensity (Ambient, Directional, and Ball lights).
+    - Reduced emissive intensity for all materials.
+    - Set sound/voice to be muted by default.
