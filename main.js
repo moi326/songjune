@@ -74,7 +74,7 @@ let isMuted = false;
 let scene, camera, renderer, ball, dirLight, audioListener, bgMusic;
 let sfxCoin, sfxJump, sfxGameOver, sfxLand;
 let starfield, bottomFloor, grid;
-let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [];
+let obstacles = [], jumpPads = [], superJumpPads = [], scorePads = [], coinMeshes = [], floorTiles = [], tunnels = [], titanOrbs = [], boostPads = [], flightTrail = [], floatingTexts = [];
 let keys = {};
 let ballVelocity = new THREE.Vector3(0, 0, 0);
 const MUSIC_URL = 'https://cdn.pixabay.com/audio/2022/03/15/audio_73663a778c.mp3'; // High-energy intense track
@@ -145,6 +145,35 @@ async function saveUserDataToCloud() {
         try { await setDoc(doc(db, "users", currentUser.uid), { highScore, coins, lastPlayed: Date.now() }, { merge: true }); }
         catch (e) { console.error("Cloud save failed:", e); }
     }
+}
+
+// --- VOICE & VISUAL FEEDBACK ---
+function speak(text) {
+    if (isMuted) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ko-KR';
+    utterance.rate = 1.8; 
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+}
+
+function showFloatingText(text, color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#' + new THREE.Color(color).getHexString();
+    ctx.font = 'bold 60px Arial';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'black'; ctx.shadowBlur = 10;
+    ctx.fillText(text, 128, 80);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const sprite = new THREE.Sprite(mat);
+    sprite.position.copy(ball.position).y += 2;
+    sprite.scale.set(4, 2, 1);
+    scene.add(sprite);
+    floatingTexts.push({ mesh: sprite, life: 1.0 });
 }
 
 // --- INITIALIZATION ---
@@ -526,6 +555,8 @@ function updatePhysics() {
         if (j.userData.boundingBox && j.userData.boundingBox.intersectsSphere(ballSphere)) {
             ballVelocity.y = JUMP_IMPULSE * 1.5; 
             if (sfxJump && !isMuted) { if (sfxJump.isPlaying) sfxJump.stop(); sfxJump.play(); }
+            speak("점프");
+            showFloatingText("점프!", 0x00ff00);
         }
     });
     superJumpPads.forEach(s => { 
@@ -534,6 +565,8 @@ function updatePhysics() {
             isFlying = true; 
             flightTimer = FLIGHT_DURATION; 
             if (sfxJump && !isMuted) { if (sfxJump.isPlaying) sfxJump.stop(); sfxJump.play(); }
+            speak("날아올라");
+            showFloatingText("날아올라!", 0xff00ff);
         } 
     });
     scorePads = scorePads.filter(p => { if (p.userData.boundingBox && p.userData.boundingBox.intersectsSphere(ballSphere)) { scoreBonus -= p.userData.scorePenalty; removeAndDispose(p); return false; } return true; });
@@ -545,6 +578,8 @@ function updatePhysics() {
             coins += 10; 
             localStorage.setItem('totalCoins', coins);
             if (sfxCoin && !isMuted) { if (sfxCoin.isPlaying) sfxCoin.stop(); sfxCoin.play(); }
+            speak("야미");
+            showFloatingText("야미!", 0xffd700);
             removeAndDispose(c); return false; 
         } 
         return true; 
@@ -582,6 +617,18 @@ function animate() {
     // Pulse floor rims
     const time = Date.now() * 0.002;
     MATS.rim.opacity = 0.3 + Math.abs(Math.sin(time)) * 0.4;
+
+    // Floating texts animation
+    for(let i=floatingTexts.length-1; i>=0; i--) {
+        const ft = floatingTexts[i];
+        ft.life -= 0.02;
+        ft.mesh.position.y += 0.1;
+        ft.mesh.material.opacity = ft.life;
+        if (ft.life <= 0) {
+            scene.remove(ft.mesh);
+            floatingTexts.splice(i, 1);
+        }
+    }
 
     renderer.render(scene, camera); 
 }
