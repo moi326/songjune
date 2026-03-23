@@ -145,7 +145,7 @@ function initAuth() {
 }
 
 async function handleGoogleLogin() {
-    try { await signInWithPopup(auth, provider); } catch (e) { console.error(e); }
+    try { await signInWithPopup(auth, provider); } catch (e) { console.error("Login Error:", e); }
 }
 
 async function syncUserCloudData(uid) {
@@ -292,8 +292,7 @@ function init() {
     if (reviveButton) reviveButton.addEventListener('click', (e) => { e.stopPropagation(); reviveGame(); });
     if (startBtn) startBtn.addEventListener('click', (e) => { e.stopPropagation(); handleSpacePress(); });
     if (startOverlay) startOverlay.addEventListener('click', (e) => {
-        // Only trigger if clicking the backdrop, not buttons
-        if (e.target === startOverlay) handleSpacePress();
+        if (!e.target.closest('button')) handleSpacePress();
     });
     if (gameOverOverlay) gameOverOverlay.addEventListener('click', (e) => {
         if (!e.target.closest('button')) handleSpacePress();
