@@ -4,11 +4,19 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { firebaseConfig } from './firebase-config.js';
 
+console.log("Game Script Loading...");
+
 // --- FIREBASE SETUP ---
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
+let app, auth, db, provider;
+try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    provider = new GoogleAuthProvider();
+    console.log("Firebase Initialized Successfully");
+} catch (err) {
+    console.error("Firebase Init Error:", err);
+}
 
 // --- CONFIGURATION ---
 const TRACK_WIDTH = 10;
@@ -105,6 +113,7 @@ let currentUser = null;
 
 // --- AUTH & SYNC ---
 function initAuth() {
+    if (!auth) return;
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentUser = user;
@@ -119,10 +128,20 @@ function initAuth() {
             if (userProfile) userProfile.style.display = 'none';
         }
     });
-    if (googleLoginBtn) googleLoginBtn.addEventListener('click', handleGoogleLogin);
-    if (loginBtn) loginBtn.addEventListener('click', handleGoogleLogin);
+    if (googleLoginBtn) googleLoginBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleGoogleLogin();
+    });
+    if (loginBtn) loginBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleGoogleLogin();
+    });
     const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) logoutBtn.addEventListener('click', () => { auth.signOut(); location.reload(); });
+    if (logoutBtn) logoutBtn.addEventListener('click', (e) => { 
+        e.stopPropagation();
+        auth.signOut(); 
+        location.reload(); 
+    });
 }
 
 async function handleGoogleLogin() {
@@ -130,14 +149,18 @@ async function handleGoogleLogin() {
 }
 
 async function syncUserCloudData(uid) {
-    const docRef = doc(db, "users", uid);
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-        const d = snap.data();
-        if (d.highScore > highScore) { highScore = d.highScore; localStorage.setItem('highScore', highScore); }
-        if (d.coins > coins) { coins = d.coins; localStorage.setItem('totalCoins', coins); }
-    } else {
-        await setDoc(docRef, { highScore, coins, lastPlayed: Date.now() });
+    try {
+        const docRef = doc(db, "users", uid);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+            const d = snap.data();
+            if (d.highScore > highScore) { highScore = d.highScore; localStorage.setItem('highScore', highScore); }
+            if (d.coins > coins) { coins = d.coins; localStorage.setItem('totalCoins', coins); }
+        } else {
+            await setDoc(docRef, { highScore, coins, lastPlayed: Date.now() });
+        }
+    } catch (err) {
+        console.error("Firestore sync error:", err);
     }
 }
 
@@ -180,6 +203,7 @@ function showFloatingText(text, color) {
 
 // --- INITIALIZATION ---
 function init() {
+    console.log("Initializing Scene...");
     initAuth();
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x100020);
@@ -258,23 +282,25 @@ function init() {
 
     window.addEventListener('keydown', (e) => { 
         keys[e.code] = true; 
-        if (state === 'START' || state === 'GAMEOVER') handleSpacePress(); 
+        if ((state === 'START' || state === 'GAMEOVER') && e.code === 'Space') {
+            handleSpacePress(); 
+        }
     });
     window.addEventListener('keyup', (e) => keys[e.code] = false);
     window.addEventListener('resize', onWindowResize);
     
-    if (reviveButton) reviveButton.addEventListener('click', reviveGame);
-    if (startBtn) startBtn.addEventListener('click', handleSpacePress);
-    if (startOverlay) startOverlay.addEventListener('click', handleSpacePress);
+    if (reviveButton) reviveButton.addEventListener('click', (e) => { e.stopPropagation(); reviveGame(); });
+    if (startBtn) startBtn.addEventListener('click', (e) => { e.stopPropagation(); handleSpacePress(); });
+    if (startOverlay) startOverlay.addEventListener('click', (e) => {
+        // Only trigger if clicking the backdrop, not buttons
+        if (e.target === startOverlay) handleSpacePress();
+    });
     if (gameOverOverlay) gameOverOverlay.addEventListener('click', (e) => {
         if (!e.target.closest('button')) handleSpacePress();
     });
-    if (soundToggle) soundToggle.addEventListener('click', toggleSound);
+    if (soundToggle) soundToggle.addEventListener('click', (e) => { e.stopPropagation(); toggleSound(); });
 
-    // Initial interaction to start
-    window.addEventListener('mousedown', () => { if (state === 'START') handleSpacePress(); }, { once: true });
-    window.addEventListener('touchstart', () => { if (state === 'START') handleSpacePress(); }, { once: true });
-
+    console.log("Scene Ready.");
     animate();
 }
 
@@ -295,8 +321,10 @@ function toggleSound() {
 
 function handleSpacePress() { 
     if (state === 'START' || state === 'GAMEOVER') { 
-        if (THREE.AudioContext.getContext().state === 'suspended') {
-            THREE.AudioContext.getContext().resume();
+        console.log("Game Starting...");
+        const audioCtx = THREE.AudioContext.getContext();
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
         }
         if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play(); 
         resetGame(); 
@@ -607,14 +635,10 @@ function gameOver() {
 
 function reviveGame() {
     if (coins >= REVIVE_COST) {
-        coins -= REVIVE_COST; 
-        localStorage.setItem('totalCoins', coins);
+        coins -= REVIVE_COST; localStorage.setItem('totalCoins', coins);
         state = 'PLAYING'; 
-        isTitan = true; 
-        titanTimer = 3; 
-        ball.scale.set(3, 3, 3); 
-        ballVelocity.set(0, 0, 0);
-        ball.position.y = BALL_RADIUS + 10; 
+        isTitan = true; titanTimer = 3; ball.scale.set(3, 3, 3); 
+        ballVelocity.set(0, 0, 0); ball.position.y = BALL_RADIUS + 10; 
         if (gameOverOverlay) gameOverOverlay.style.display = 'none';
         if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play();
     }
