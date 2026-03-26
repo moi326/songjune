@@ -15,7 +15,7 @@ try {
     provider = new GoogleAuthProvider();
     console.log("Firebase Initialized Successfully");
 } catch (err) {
-    console.error("Firebase Init Error:", err);
+    console.warn("Firebase Init Error (Game will run without cloud sync):", err);
 }
 
 // --- CONFIGURATION ---
@@ -145,10 +145,12 @@ function initAuth() {
 }
 
 async function handleGoogleLogin() {
+    if (!auth || !provider) return;
     try { await signInWithPopup(auth, provider); } catch (e) { console.error("Login Error:", e); }
 }
 
 async function syncUserCloudData(uid) {
+    if (!db) return;
     try {
         const docRef = doc(db, "users", uid);
         const snap = await getDoc(docRef);
@@ -165,7 +167,7 @@ async function syncUserCloudData(uid) {
 }
 
 async function saveUserDataToCloud() {
-    if (currentUser) {
+    if (currentUser && db) {
         try { await setDoc(doc(db, "users", currentUser.uid), { highScore, coins, lastPlayed: Date.now() }, { merge: true }); }
         catch (e) { console.error("Cloud save failed:", e); }
     }
@@ -204,7 +206,12 @@ function showFloatingText(text, color) {
 // --- INITIALIZATION ---
 function init() {
     console.log("Initializing Scene...");
-    initAuth();
+    try {
+        initAuth();
+    } catch (e) {
+        console.warn("Auth Init failed, continuing...", e);
+    }
+
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x100020);
     scene.fog = new THREE.Fog(0x100020, 20, 450);
@@ -234,7 +241,9 @@ function init() {
         bgMusic.setBuffer(b); 
         bgMusic.setLoop(true); 
         bgMusic.setVolume(0.5); 
-    });
+        console.log("Music Loaded Successfully");
+    }, undefined, (err) => console.warn("Music load failed", err));
+
     audioLoader.load(COIN_SFX_URL, (b) => sfxCoin.setBuffer(b));
     audioLoader.load(JUMP_SFX_URL, (b) => sfxJump.setBuffer(b));
     audioLoader.load(OVER_SFX_URL, (b) => sfxGameOver.setBuffer(b));
@@ -292,14 +301,18 @@ function init() {
     if (reviveButton) reviveButton.addEventListener('click', (e) => { e.stopPropagation(); reviveGame(); });
     if (startBtn) startBtn.addEventListener('click', (e) => { e.stopPropagation(); handleSpacePress(); });
     if (startOverlay) startOverlay.addEventListener('click', (e) => {
-        if (!e.target.closest('button')) handleSpacePress();
+        if (e.target.id === 'overlay' || e.target.classList.contains('overlay-content')) {
+            handleSpacePress();
+        }
     });
     if (gameOverOverlay) gameOverOverlay.addEventListener('click', (e) => {
-        if (!e.target.closest('button')) handleSpacePress();
+        if (e.target.id === 'game-over-overlay' || e.target.classList.contains('overlay-content')) {
+            handleSpacePress();
+        }
     });
     if (soundToggle) soundToggle.addEventListener('click', (e) => { e.stopPropagation(); toggleSound(); });
 
-    console.log("Scene Ready.");
+    console.log("Scene Ready. Starting Animation Loop...");
     animate();
 }
 
@@ -320,17 +333,28 @@ function toggleSound() {
 
 function handleSpacePress() { 
     if (state === 'START' || state === 'GAMEOVER') { 
-        console.log("Game Starting...");
+        console.log("handleSpacePress: Starting/Restarting Game...");
         const audioCtx = THREE.AudioContext.getContext();
         if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
+            audioCtx.resume().then(() => {
+                console.log("AudioContext Resumed");
+                startMusicAndReset();
+            });
+        } else {
+            startMusicAndReset();
         }
-        if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play(); 
-        resetGame(); 
     } 
 }
 
+function startMusicAndReset() {
+    if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) {
+        bgMusic.play().catch(err => console.warn("Music play failed", err));
+    }
+    resetGame();
+}
+
 function resetGame() {
+    console.log("Resetting Game State...");
     state = 'PLAYING'; score = 0; scoreBonus = 0; isFlying = false; isTitan = false; isBoosting = false;
     titanTimer = 0; boostTimer = 0; flightTimer = 0;
     ball.scale.set(1, 1, 1); ball.position.set(0, BALL_RADIUS + 2, 0); 
@@ -339,6 +363,7 @@ function resetGame() {
     if (startOverlay) startOverlay.style.display = 'none'; 
     if (gameOverOverlay) gameOverOverlay.style.display = 'none';
     for(let z = 20; z > -150; z -= TILE_SIZE) spawnFloorRow(z);
+    console.log("Game State Reset Complete.");
 }
 
 function clearWorld() {
@@ -361,6 +386,8 @@ function reviveGame() {
         isTitan = true; titanTimer = 3; ball.scale.set(3, 3, 3); 
         ballVelocity.set(0, 0, 0); ball.position.y = BALL_RADIUS + 10; 
         if (gameOverOverlay) gameOverOverlay.style.display = 'none';
+        const audioCtx = THREE.AudioContext.getContext();
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play();
     }
 }
@@ -632,24 +659,24 @@ function gameOver() {
     if (reviveContainer) reviveContainer.style.display = coins >= REVIVE_COST ? 'block' : 'none';
 }
 
-function reviveGame() {
-    if (coins >= REVIVE_COST) {
-        coins -= REVIVE_COST; localStorage.setItem('totalCoins', coins);
-        state = 'PLAYING'; 
-        isTitan = true; titanTimer = 3; ball.scale.set(3, 3, 3); 
-        ballVelocity.set(0, 0, 0); ball.position.y = BALL_RADIUS + 10; 
-        if (gameOverOverlay) gameOverOverlay.style.display = 'none';
-        if (!isMuted && bgMusic && bgMusic.buffer && !bgMusic.isPlaying) bgMusic.play();
+function animate() { 
+    requestAnimationFrame(animate); 
+    try {
+        updatePhysics(); 
+        MATS.rim.opacity = 0.3 + Math.abs(Math.sin(Date.now() * 0.002)) * 0.4;
+        for(let i=floatingTexts.length-1; i>=0; i--) {
+            const ft = floatingTexts[i]; ft.life -= 0.02; ft.mesh.position.y += 0.1; ft.mesh.material.opacity = ft.life;
+            if (ft.life <= 0) { scene.remove(ft.mesh); floatingTexts.splice(i, 1); }
+        }
+        renderer.render(scene, camera);
+    } catch (e) {
+        console.error("Animation Loop Error:", e);
     }
 }
 
-function animate() { 
-    requestAnimationFrame(animate); updatePhysics(); 
-    MATS.rim.opacity = 0.3 + Math.abs(Math.sin(Date.now() * 0.002)) * 0.4;
-    for(let i=floatingTexts.length-1; i>=0; i--) {
-        const ft = floatingTexts[i]; ft.life -= 0.02; ft.mesh.position.y += 0.1; ft.mesh.material.opacity = ft.life;
-        if (ft.life <= 0) { scene.remove(ft.mesh); floatingTexts.splice(i, 1); }
-    }
-    renderer.render(scene, camera); 
+// Start the game initialization
+try {
+    init();
+} catch (e) {
+    console.error("Critical Init Error:", e);
 }
-init();
