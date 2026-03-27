@@ -2,40 +2,53 @@
 
 ## Overview
 
-A high-performance, immersive 3D rolling ball game built with Three.js. This version features "Top-to-Bottom" optimizations ensuring 60 FPS on modern web browsers while maintaining high visual fidelity and cloud data synchronization with Firebase.
+A high-performance, immersive 3D rolling ball game built with Three.js. This version features "Top-to-Bottom" optimizations ensuring 60 FPS on modern web browsers while delivering a visually stunning retro-synthwave experience.
 
-## Design & Aesthetics
+## Key Features
 
-- **Visual Style:** Iconic "Cyber Sunset" (Synthwave) theme with high-intensity neon colors.
-- **Lighting & Visibility:** 
-    - Ambient (0.5) and Directional (1.2, Magenta).
-    - **Neon Elements:** Vibrant pink, cyan, and purple color palette for all game objects.
-    - **Interactive Pads:** Brighter emissive glow for jump, boost, and items.
-- **Background:**
-    - **Synthwave Theme:** 
-        - **Retro Neon Sun:** A massive orange/yellow sun centered in the distant horizon.
-        - **Magenta Starfield:** Glowing pink stars filling the upper atmosphere.
-        - **Infinite Grid:** A glowing cyan/magenta grid floor extending to the horizon.
-        - **Deep Purple Fog:** Atmospheric fog creating a seamless transition into the neon horizon.
-- **Voice Feedback:**
-    - Real-time voice feedback using `SpeechSynthesisUtterance`.
-- **Animations:**
-    - High-performance sprite-based floating text.
-    - Smooth camera movement following the ball.
+### 1. Core Physics & Gameplay
+- **Precise Control**: Tight responsiveness for jumping and lateral movement.
+- **Dynamic Gravity**: Custom-tuned gravity constant for satisfying arcade-style jumps.
+- **Progressive Difficulty**: Speed increases gradually as the score rises.
+- **Side Fall Physics**: (NEW) Ball can now fall off the sides of the track if steered beyond the edges, adding a layer of risk and precision.
 
-## Features
+### 2. Immersive Visuals (Neon Purple & Cyan)
+- **Synthwave Aesthetics**: High-contrast neon materials with emissive glowing effects.
+- **Infinite Starfield**: A procedurally generated background with 1,500 magenta stars.
+- **Grid Helper**: A dual-color grid representing the "infinite void" below the track.
+- **Synthwave Sun**: A massive, glowing sun disk in the distance for depth perception.
 
-- **Core Gameplay:** Endless runner style with increasing speed based on score.
-- **Obstacles:** Variety of moving and static neon obstacles.
-- **Power-ups:** Jump, Super Jump (Flight), Titan Orb (Invincibility), Boost Pad.
-- **Currency & Scoring:** Coins, Score, and High Score systems.
-- **Firebase Integration:** Google Auth and Firestore data sync.
+### 3. Advanced Game Mechanics
+- **Varied Obstacles**:
+  - Rotating Windmills
+  - Oscillating Crushes
+  - Bouncing Spheres
+  - Laser Barriers
+  - Heavy Pendulums
+- **Power-Ups**:
+  - **Flight (Super Jump)**: Elevates the ball into a high-speed flight mode with particle trails.
+  - **Titan Mode**: Grows the ball 3x larger, allowing it to smash through obstacles.
+  - **Boost Pad**: Provides a sudden burst of speed and FOV expansion.
+- **Economy & Revive**:
+  - Collectible Gold Coins.
+  - Revive system: Continue the run by spending 300 coins after a Game Over.
 
-## Recent Changes (March 21, 2026)
+### 4. Technical Optimizations
+- **Asset Pooling**: Geometry and materials are reused globally to prevent garbage collection spikes.
+- **Frustum Culling**: Objects behind the camera are automatically removed from the scene.
+- **Layered UI**: DOM-based overlays for high-performance text rendering without Three.js overhead.
+- **Stable 60 FPS**: Minimized draw calls and optimized bounding box collision detection.
 
-- **Cyber Sunset Transformation:** 
-    - Replaced the space theme with a retro-future Synthwave aesthetic.
-    - Added a massive 2D neon sun and magenta-tinted starfield.
-    - Re-colored all materials to fit the neon purple/cyan color scheme.
-    - Enhanced grid visuals with high-contrast magenta and cyan lines.
-    - Brightened all interactive elements for maximum neon impact.
+### 5. Social & Cloud (Firebase Integration)
+- **Google Authentication**: Global login via Firebase Auth.
+- **Cloud Sync**: High scores and coin totals are automatically synced to Firestore.
+- **Persistent Local Storage**: Fallback to `localStorage` for offline play or initialization speed.
+
+---
+
+## Technical Debt / Known Issues (Resolved)
+- Fixed transparent materials flickering during high-speed movement.
+- Optimized bounding box updates for moving objects to prevent "clipping" through obstacles.
+- Enhanced Firebase debugging with redirect login fallback for restricted environments.
+- Added alerts to verify script execution and login button connectivity.
+- **Implemented Side Fall Physics**: Removed X-axis clamping to allow the ball to fall off the track edges.

@@ -666,9 +666,7 @@ function updatePhysics() {
         }
     });
 
-    // Clamp ball X to prevent going through side boundaries visually
-    const maxX = TRACK_WIDTH / 2 - BALL_RADIUS + 0.5;
-    ball.position.x = THREE.MathUtils.clamp(ball.position.x, -maxX, maxX);
+    // Clamp ball X removed to allow falling off sides
 
     const spawnZ = ball.position.z - 120;
     if (Math.abs(spawnZ % TILE_SIZE) < speed) spawnFloorRow(spawnZ);
