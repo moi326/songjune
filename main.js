@@ -1,7 +1,8 @@
+alert("메인 스크립트 실행됨!");
 import * as THREE from 'three';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 console.log("Game Script Loading...");
@@ -14,6 +15,15 @@ try {
     db = getFirestore(app);
     provider = new GoogleAuthProvider();
     console.log("Firebase Initialized Successfully");
+    
+    // 리다이렉트 결과 처리
+    getRedirectResult(auth).then((result) => {
+        if (result) {
+            console.log("Redirect Login Success:", result.user);
+        }
+    }).catch((e) => {
+        console.error("Redirect Error:", e);
+    });
 } catch (err) {
     console.warn("Firebase Init Error (Game will run without cloud sync):", err);
 }
@@ -156,25 +166,35 @@ function initAuth() {
 }
 
 async function handleGoogleLogin() {
+    alert("로그인 버튼 클릭됨! 인증 시도 시작...");
     if (!auth || !provider) {
         alert("Firebase Auth가 초기화되지 않았습니다. 설정을 확인해주세요.");
         return;
     }
-    console.log("Attempting Google Login...");
+    console.log("Attempting Login...");
     try { 
+        // 우선 팝업 시도
         const result = await signInWithPopup(auth, provider);
-        console.log("Login Success:", result.user);
+        console.log("Popup Login Success:", result.user);
+        alert("팝업 로그인 성공: " + result.user.displayName);
     } catch (e) { 
-        console.error("Login Error Details:", e);
-        let message = "로그인 중 오류가 발생했습니다.";
-        if (e.code === 'auth/popup-blocked') {
-            message = "팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.";
+        console.warn("Popup failed or blocked, trying redirect...", e);
+        if (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request' || e.code === 'auth/internal-error') {
+            alert("팝업이 차단되어 리다이렉트 방식으로 전환합니다.");
+            try {
+                // 팝업 실패 시 리다이렉트 시도
+                await signInWithRedirect(auth, provider);
+            } catch (re) {
+                console.error("Redirect Error:", re);
+                alert("로그인에 실패했습니다: " + re.message);
+            }
         } else if (e.code === 'auth/operation-not-allowed') {
-            message = "Firebase 콘솔에서 Google 로그인이 활성화되지 않았습니다.";
+            alert("Firebase 콘솔에서 Google 로그인이 활성화되지 않았습니다.");
         } else if (e.code === 'auth/unauthorized-domain') {
-            message = "현재 도메인이 Firebase의 승인된 도메인 목록에 없습니다.";
+            alert("현재 도메인이 Firebase의 승인된 도메인 목록에 없습니다.");
+        } else {
+            alert("로그인 중 오류 발생: " + e.code);
         }
-        alert(message + "\n(" + e.code + ")");
     }
 }
 
