@@ -113,9 +113,14 @@ let currentUser = null;
 
 // --- AUTH & SYNC ---
 function initAuth() {
-    if (!auth) return;
+    if (!auth) {
+        console.error("Firebase Auth not initialized. Check your firebase-config.js and network.");
+        return;
+    }
+    console.log("Initializing Auth Listeners...");
     onAuthStateChanged(auth, async (user) => {
         if (user) {
+            console.log("User logged in:", user.displayName);
             currentUser = user;
             if (loginBtn) loginBtn.style.display = 'none';
             if (userProfile) userProfile.style.display = 'flex';
@@ -123,11 +128,13 @@ function initAuth() {
             if (userPhotoDisplay) userPhotoDisplay.src = user.photoURL || "";
             await syncUserCloudData(user.uid);
         } else {
+            console.log("No user logged in.");
             currentUser = null;
             if (loginBtn) loginBtn.style.display = 'block';
             if (userProfile) userProfile.style.display = 'none';
         }
     });
+    
     if (googleLoginBtn) googleLoginBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         handleGoogleLogin();
@@ -139,14 +146,36 @@ function initAuth() {
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) logoutBtn.addEventListener('click', (e) => { 
         e.stopPropagation();
-        auth.signOut(); 
-        location.reload(); 
+        signOut(auth).then(() => {
+            console.log("Signed out successfully");
+            location.reload(); 
+        }).catch((error) => {
+            console.error("Sign out error:", error);
+        });
     });
 }
 
 async function handleGoogleLogin() {
-    if (!auth || !provider) return;
-    try { await signInWithPopup(auth, provider); } catch (e) { console.error("Login Error:", e); }
+    if (!auth || !provider) {
+        alert("Firebase Auth가 초기화되지 않았습니다. 설정을 확인해주세요.");
+        return;
+    }
+    console.log("Attempting Google Login...");
+    try { 
+        const result = await signInWithPopup(auth, provider);
+        console.log("Login Success:", result.user);
+    } catch (e) { 
+        console.error("Login Error Details:", e);
+        let message = "로그인 중 오류가 발생했습니다.";
+        if (e.code === 'auth/popup-blocked') {
+            message = "팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.";
+        } else if (e.code === 'auth/operation-not-allowed') {
+            message = "Firebase 콘솔에서 Google 로그인이 활성화되지 않았습니다.";
+        } else if (e.code === 'auth/unauthorized-domain') {
+            message = "현재 도메인이 Firebase의 승인된 도메인 목록에 없습니다.";
+        }
+        alert(message + "\n(" + e.code + ")");
+    }
 }
 
 async function syncUserCloudData(uid) {
@@ -424,7 +453,15 @@ function spawnTunnel(z) {
         r1.position.set(-w/2+0.3, h/2, -i+TILE_SIZE/2); r2.position.set(w/2-0.3, h/2, -i+TILE_SIZE/2);
         g.add(r1, r2);
     }
-    g.position.z = z; scene.add(g); tunnels.push(g);
+    g.position.z = z; 
+    scene.add(g); 
+    
+    // Add collision data for walls
+    lw.userData.boundingBox = new THREE.Box3();
+    rw.userData.boundingBox = new THREE.Box3();
+    g.userData.walls = [lw, rw];
+    
+    tunnels.push(g);
 }
 
 function spawnObstacle(z) {
@@ -468,8 +505,8 @@ function spawnObstacle(z) {
         mesh.userData = { isGates: true, timeOffset: Math.random()*Math.PI*2, speed: 0.002, leftGate: l, rightGate: r };
     }
     if (mesh) {
-        mesh.castShadow = true; mesh.receiveShadow = true; mesh.updateMatrixWorld();
-        mesh.userData.boundingBox = new THREE.Box3().setFromObject(mesh);
+        mesh.castShadow = true; mesh.receiveShadow = true; 
+        mesh.userData.boundingBox = new THREE.Box3();
         scene.add(mesh); obstacles.push(mesh);
     }
 }
@@ -577,19 +614,41 @@ function updatePhysics() {
     obstacles.forEach(o => {
         if (o.userData && o.userData.boundingBox) {
             const t = Date.now() * (o.userData.speed || o.userData.bounceSpeed || 0.002) + o.userData.timeOffset;
-            let needsBox = false;
-            if (o.userData.isMoving) { o.position.x += o.userData.speed; if (Math.abs(o.position.x) > TRACK_WIDTH/2 - 1) o.userData.speed *= -1; needsBox = true; }
-            else if (o.userData.isCrusher) { o.position.y = 1 + Math.abs(Math.sin(t)) * 5; needsBox = true; }
+            let needsBox = true; // Always update for moving/rotating objects to prevent clipping
+            if (o.userData.isMoving) { o.position.x += o.userData.speed; if (Math.abs(o.position.x) > TRACK_WIDTH/2 - 1) o.userData.speed *= -1; }
+            else if (o.userData.isCrusher) { o.position.y = 1 + Math.abs(Math.sin(t)) * 5; }
             else if (o.userData.isWindmill) { o.rotation.y += o.userData.speed; o.rotation.z += o.userData.speed; }
-            else if (o.userData.isBouncer) { o.position.y = o.userData.startY + Math.abs(Math.sin(t)) * o.userData.height; needsBox = true; }
+            else if (o.userData.isBouncer) { o.position.y = o.userData.startY + Math.abs(Math.sin(t)) * o.userData.height; }
             else if (o.userData.isLaser) o.visible = Math.sin(t) > 0;
             else if (o.userData.isPendulum) o.rotation.z = Math.sin(t) * o.userData.angle;
             else if (o.userData.isGates) {
-                const off = Math.abs(Math.sin(t)) * 4; o.userData.leftGate.position.x = -TRACK_WIDTH/4-2+off; o.userData.rightGate.position.x = TRACK_WIDTH/4+2-off; needsBox = true;
+                const off = Math.abs(Math.sin(t)) * 4; o.userData.leftGate.position.x = -TRACK_WIDTH/4-2+off; o.userData.rightGate.position.x = TRACK_WIDTH/4+2-off;
+            } else { needsBox = false; }
+            
+            if (needsBox) {
+                o.updateMatrixWorld();
+                o.userData.boundingBox.setFromObject(o);
             }
-            if (needsBox) o.userData.boundingBox.setFromObject(o);
         }
     });
+
+    // Tunnel wall collision
+    tunnels.forEach(t => {
+        if (t.userData.walls) {
+            t.userData.walls.forEach(w => {
+                w.updateMatrixWorld();
+                w.userData.boundingBox.setFromObject(w);
+                if (w.userData.boundingBox.intersectsSphere(ballSphere)) {
+                    if (isTitan) { /* Titan ignores tunnel walls? maybe not, let's just make it bouncy or gameover */ gameOver(); }
+                    else { gameOver(); }
+                }
+            });
+        }
+    });
+
+    // Clamp ball X to prevent going through side boundaries visually
+    const maxX = TRACK_WIDTH / 2 - BALL_RADIUS + 0.5;
+    ball.position.x = THREE.MathUtils.clamp(ball.position.x, -maxX, maxX);
 
     const spawnZ = ball.position.z - 120;
     if (Math.abs(spawnZ % TILE_SIZE) < speed) spawnFloorRow(spawnZ);
